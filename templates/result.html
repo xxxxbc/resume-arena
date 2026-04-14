@@ -108,6 +108,33 @@
     </div>
 </div>
 
+<!-- Job Recommendations -->
+{{if $r.JobMatches}}
+<div class="card mb-4">
+    <div class="card-body">
+        <h5><i class="bi bi-signpost-split"></i> AI 岗位推荐</h5>
+        <div class="row g-2 mt-2">
+            {{range $r.JobMatches}}
+            <div class="col-md-6 col-lg-4">
+                <div class="card h-100 border-0 bg-light">
+                    <div class="card-body p-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="fw-bold">{{.Title}}</span>
+                            <span class="badge {{if ge .Score 80}}bg-success{{else if ge .Score 60}}bg-primary{{else}}bg-secondary{{end}} fs-6">{{.Score}}%</span>
+                        </div>
+                        <div class="progress mb-2" style="height:6px">
+                            <div class="progress-bar {{if ge .Score 80}}bg-success{{else if ge .Score 60}}bg-primary{{else}}bg-secondary{{end}}" style="width:{{.Score}}%"></div>
+                        </div>
+                        <small class="text-muted">{{.Reason}}</small>
+                    </div>
+                </div>
+            </div>
+            {{end}}
+        </div>
+    </div>
+</div>
+{{end}}
+
 {{if $r.Hidden}}
 <div class="alert alert-secondary text-center">
     <i class="bi bi-eye-slash"></i> 该用户选择隐藏简历详情，竞赛奖项、学校信息、原始简历及AI总评不公开。

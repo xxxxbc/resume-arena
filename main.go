@@ -24,14 +24,11 @@ import (
 	"time"
 )
 
-// Configuration via environment variables
-var (
-	adminPassword   = getEnv("ADMIN_PASSWORD", "changeme")
-	adminTokenSecret = getEnv("ADMIN_TOKEN_SECRET", "change-this-secret")
-	aiAPIURL        = getEnv("AI_API_URL", "https://api.openai.com/v1/responses")
-	aiAPIKey        = getEnv("AI_API_KEY", "your-api-key")
-	aiModel         = getEnv("AI_MODEL", "gpt-4o")
-)
+var adminPassword = getEnv("ADMIN_PASSWORD", "changeme")
+var adminTokenSecret = getEnv("ADMIN_TOKEN_SECRET", "change-this-secret")
+var aiAPIURL = getEnv("AI_API_URL", "https://api.openai.com/v1/responses")
+var aiAPIKey = getEnv("AI_API_KEY", "your-api-key")
+var aiModel = getEnv("AI_MODEL", "gpt-4o")
 
 func getEnv(key, fallback string) string {
 	if v := os.Getenv(key); v != "" {
@@ -194,6 +191,7 @@ type Resume struct {
 	OverallComment string    `json:"overall_comment"`
 	Suggestions    []string  `json:"suggestions"`
 	Summary        string    `json:"summary"`
+	JobMatches     []JobMatch `json:"job_matches"`
 	Status         string    `json:"status"`
 	ErrorMsg       string    `json:"error_msg"`
 	ShareCode      string    `json:"share_code"`
@@ -212,11 +210,18 @@ func (r *Resume) FileType() string {
 	return "pdf"
 }
 
+type JobMatch struct {
+	Title   string `json:"title"`
+	Score   int    `json:"score"`
+	Reason  string `json:"reason"`
+}
+
 type ScoreResult struct {
 	TotalScore  float64             `json:"total_score"`
 	Dimensions  map[string]DimScore `json:"dimensions"`
 	Suggestions []string            `json:"suggestions"`
 	Summary     string              `json:"summary"`
+	JobMatches  []JobMatch          `json:"job_matches"`
 }
 
 type DimScore struct {
@@ -918,6 +923,7 @@ func scoreResume(id int, filePath string) {
 		r.OverallComment = overall.Comment
 		r.Suggestions = result.Suggestions
 		r.Summary = result.Summary
+		r.JobMatches = result.JobMatches
 		r.Status = "done"
 	})
 }
@@ -1044,7 +1050,12 @@ var scoringPrompt = `你是一位严格的ACM/ICPC竞赛圈简历评审专家。
     "overall": {"score": <0-100>, "comment": "<评价>"}
   },
   "suggestions": ["<建议1>", "<建议2>", "<建议3>"],
-  "summary": "<2-3句话的总体评价>"
+  "summary": "<2-3句话的总体评价>",
+  "job_matches": [
+    {"title": "<岗位名称>", "score": <匹配度0-100>, "reason": "<一句话说明匹配原因>"},
+    {"title": "<岗位名称>", "score": <匹配度0-100>, "reason": "<一句话说明匹配原因>"},
+    {"title": "<岗位名称>", "score": <匹配度0-100>, "reason": "<一句话说明匹配原因>"}
+  ]
 }
 
 各维度评分标准（严格按以下标准打分）：
@@ -1176,6 +1187,30 @@ var scoringPrompt = `你是一位严格的ACM/ICPC竞赛圈简历评审专家。
    - 30-54: 内容偏少（100-300字），部分关键信息缺失
    - 0-29: 内容过于简略（少于100字），或者不是简历内容
 
+6. job_matches (岗位推荐):
+   根据简历内容，推荐3-5个最匹配的岗位方向，并给出匹配度(0-100)和原因。
+   岗位方向包括但不限于：
+   - **量化开发** —— 算法竞赛能力强 + 有C++/Python底子
+   - **量化策略/研究** —— 数学好 + 算法强 + 有数据分析能力
+   - **后端开发** —— 有后端项目经验 + 熟悉数据库/框架
+   - **算法工程师(AI/ML)** —— 有机器学习/深度学习经验
+   - **基础架构(Infra)** —— 系统编程能力强 + 了解分布式/存储/网络
+   - **AI Agent开发** —— 有LLM/Agent相关经验
+   - **前端开发** —— 有前端项目经验
+   - **客户端开发(iOS/Android)** —— 有移动端经验
+   - **安全工程师** —— 有安全/CTF经验
+   - **数据工程师** —— 有大数据处理经验
+   - **嵌入式/IoT** —— 有硬件/嵌入式经验
+   - **游戏开发** —— 有游戏引擎/图形学经验
+   - **编译器/PL** —— 有编译原理/程序语言相关经验
+   - **数据库内核** —— 有数据库开发经验
+
+   匹配度评分规则：
+   - 简历中有直接相关经历 → 80-100
+   - 技能和背景高度相关但无直接经历 → 60-79
+   - 有一定相关性 → 40-59
+   - 只推荐匹配度>=50的岗位，按匹配度从高到低排列
+
 total_score字段可以随便填（后端会自己按公式算），但各维度分数必须准确。
 
 所有评价和建议必须用中文。在comment中，如果该维度信息缺失，请明确指出"简历中未提及相关信息"。`
@@ -1235,7 +1270,7 @@ func doAIRequest(reqBody []byte) (*ScoreResult, error) {
 		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+aiAPIKey)
+	req.Header.Set("Authorization", "Bearer " + aiAPIKey)
 
 	client := &http.Client{Timeout: 180 * time.Second}
 	resp, err := client.Do(req)
