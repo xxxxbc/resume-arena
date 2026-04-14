@@ -1,0 +1,231 @@
+{{define "title"}}评分结果 - Resume Arena{{end}}
+
+{{define "content"}}
+{{$r := .Resume}}
+
+{{if eq $r.Status "pending"}}
+<div class="text-center py-5" id="loading">
+    <div class="spinner-border text-primary" style="width:3rem;height:3rem;" role="status"></div>
+    <h4 class="mt-3">正在准备评分...</h4>
+    <p class="text-muted">请稍候，AI正在解析你的简历</p>
+</div>
+{{else if eq $r.Status "scoring"}}
+<div class="text-center py-5" id="loading">
+    <div class="spinner-border text-warning" style="width:3rem;height:3rem;" role="status"></div>
+    <h4 class="mt-3">AI正在评分中...</h4>
+    <p class="text-muted">LLM 正在从多个维度分析你的简历，大约需要30-60秒</p>
+</div>
+{{else if eq $r.Status "error"}}
+<div class="text-center py-5">
+    <i class="bi bi-exclamation-circle display-1 text-danger"></i>
+    <h4 class="mt-3">评分失败</h4>
+    <p class="text-danger">{{$r.ErrorMsg}}</p>
+    <a href="/upload" class="btn btn-primary mt-3">重新上传</a>
+</div>
+{{else}}
+<!-- Done -->
+<div class="text-center mb-4">
+    <h2><i class="bi bi-person-badge"></i> {{$r.Nickname}} 的简历评分</h2>
+    {{if $r.Hidden}}
+    <p><span class="badge bg-secondary"><i class="bi bi-eye-slash"></i> 该用户已隐藏简历详情，仅展示评分</span></p>
+    {{end}}
+    <p class="text-muted">
+        当前排名：<span class="badge bg-warning text-dark fs-5">第 {{.Rank}} 名</span>
+        / 共 {{.Total}} 人
+    </p>
+</div>
+
+<!-- Total Score -->
+<div class="row justify-content-center mb-4">
+    <div class="col-md-4 text-center">
+        <div class="card score-card">
+            <div class="card-body">
+                <h6 class="text-muted" style="color:rgba(255,255,255,0.8)!important">总分</h6>
+                <div class="display-2 fw-bold total-score">{{printf "%.1f" $r.TotalScore}}</div>
+                <div style="color:rgba(255,255,255,0.7)">/ 100</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Radar Chart -->
+<div class="row justify-content-center mb-4">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-body">
+                <canvas id="radarChart" height="300"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Dimension Details -->
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card h-100 border-danger">
+            <div class="card-body">
+                <h6 class="text-danger"><i class="bi bi-award"></i> ICPC/CCPC实力</h6>
+                <div class="display-6 fw-bold">{{printf "%.0f" $r.IcpcScore}}</div>
+                {{if not $r.Hidden}}<p class="text-muted small mt-2">{{$r.IcpcComment}}</p>{{end}}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100 border-success">
+            <div class="card-body">
+                <h6 class="text-success"><i class="bi bi-briefcase"></i> 实习/项目</h6>
+                <div class="display-6 fw-bold">{{printf "%.0f" $r.InternScore}}</div>
+                <p class="text-muted small mt-2">{{$r.InternComment}}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100 border-info">
+            <div class="card-body">
+                <h6 class="text-info"><i class="bi bi-building"></i> 学校背景</h6>
+                <div class="display-6 fw-bold">{{printf "%.0f" $r.SchoolScore}}</div>
+                {{if not $r.Hidden}}<p class="text-muted small mt-2">{{$r.SchoolComment}}</p>{{end}}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100 border-warning">
+            <div class="card-body">
+                <h6 class="text-warning"><i class="bi bi-code-slash"></i> 技术栈深度</h6>
+                <div class="display-6 fw-bold">{{printf "%.0f" $r.TechScore}}</div>
+                <p class="text-muted small mt-2">{{$r.TechComment}}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100 border-secondary">
+            <div class="card-body">
+                <h6 class="text-secondary"><i class="bi bi-star"></i> 综合素质</h6>
+                <div class="display-6 fw-bold">{{printf "%.0f" $r.OverallScore}}</div>
+                <p class="text-muted small mt-2">{{$r.OverallComment}}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{if $r.Hidden}}
+<div class="alert alert-secondary text-center">
+    <i class="bi bi-eye-slash"></i> 该用户选择隐藏简历详情，竞赛奖项、学校信息、原始简历及AI总评不公开。
+</div>
+{{else}}
+<!-- View Original Resume -->
+<div class="card mb-4">
+    <div class="card-body text-center">
+        <h5><i class="bi bi-file-earmark"></i> 原始简历</h5>
+        {{if isImage $r.FileName}}
+        <div class="my-3">
+            <img src="/file/{{$r.ShareCode}}" class="img-fluid rounded shadow" style="max-height:500px" alt="简历图片">
+        </div>
+        {{end}}
+        <a href="/file/{{$r.ShareCode}}" target="_blank" class="btn btn-outline-primary">
+            <i class="bi {{fileIcon $r.FileName}}"></i> 查看原始简历文件
+        </a>
+    </div>
+</div>
+
+<!-- Summary -->
+<div class="card mb-4">
+    <div class="card-body">
+        <h5><i class="bi bi-chat-square-text"></i> AI总评</h5>
+        <p class="fs-5">{{$r.Summary}}</p>
+    </div>
+</div>
+
+<!-- Suggestions -->
+{{if $r.Suggestions}}
+<div class="card mb-4">
+    <div class="card-body">
+        <h5><i class="bi bi-lightbulb"></i> 改进建议</h5>
+        <ul class="list-group list-group-flush">
+            {{range $r.Suggestions}}
+            <li class="list-group-item"><i class="bi bi-check-circle text-success"></i> {{.}}</li>
+            {{end}}
+        </ul>
+    </div>
+</div>
+{{end}}
+{{end}}
+
+<!-- Share -->
+<div class="text-center mb-4">
+    <p class="text-muted">分享链接：</p>
+    <div class="input-group w-50 mx-auto">
+        <input type="text" class="form-control" id="shareUrl" readonly>
+        <button class="btn btn-outline-primary" onclick="copyShare()">
+            <i class="bi bi-clipboard"></i> 复制
+        </button>
+    </div>
+    <div class="mt-3">
+        <a href="/ranking" class="btn btn-warning"><i class="bi bi-bar-chart"></i> 查看排行榜</a>
+        <a href="/upload" class="btn btn-outline-primary ms-2"><i class="bi bi-upload"></i> 再传一份</a>
+    </div>
+</div>
+{{end}}
+{{end}}
+
+{{define "scripts"}}
+{{$r := .Resume}}
+{{if or (eq $r.Status "pending") (eq $r.Status "scoring")}}
+<script>
+(function poll() {
+    fetch('/api/status/{{$r.ShareCode}}')
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+            if (d.status === 'done' || d.status === 'error') {
+                location.reload();
+            } else {
+                setTimeout(poll, 2000);
+            }
+        })
+        .catch(function() { setTimeout(poll, 3000); });
+})();
+</script>
+{{end}}
+
+{{if eq $r.Status "done"}}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+var scores = {{json .Scores}};
+var ctx = document.getElementById('radarChart').getContext('2d');
+new Chart(ctx, {
+    type: 'radar',
+    data: {
+        labels: ['ICPC/CCPC', '实习/项目', '学校背景', '技术栈', '综合素质'],
+        datasets: [{
+            label: '评分',
+            data: scores,
+            backgroundColor: 'rgba(13, 110, 253, 0.15)',
+            borderColor: 'rgba(13, 110, 253, 0.8)',
+            pointBackgroundColor: 'rgba(13, 110, 253, 1)',
+            pointRadius: 5,
+            borderWidth: 2
+        }]
+    },
+    options: {
+        scales: {
+            r: {
+                beginAtZero: true,
+                max: 100,
+                ticks: { stepSize: 20 }
+            }
+        },
+        plugins: {
+            legend: { display: false }
+        }
+    }
+});
+
+document.getElementById('shareUrl').value = location.href;
+
+function copyShare() {
+    navigator.clipboard.writeText(location.href);
+    alert('链接已复制!');
+}
+</script>
+{{end}}
+{{end}}

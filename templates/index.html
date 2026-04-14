@@ -1,0 +1,82 @@
+{{define "title"}}Resume Arena - ACMer简历竞技场{{end}}
+
+{{define "content"}}
+<div class="text-center py-5">
+    <h1 class="display-4 fw-bold">
+        <i class="bi bi-trophy text-warning"></i> Resume Arena
+    </h1>
+    <p class="lead text-muted mt-3">
+        ACMer 简历竞技场 - 上传你的简历，AI为你多维度评分，与全国ACMer一较高下！
+    </p>
+    <div class="mt-4">
+        <a href="/upload" class="btn btn-primary btn-lg me-3">
+            <i class="bi bi-upload"></i> 上传简历
+        </a>
+        <a href="/ranking" class="btn btn-outline-warning btn-lg">
+            <i class="bi bi-bar-chart"></i> 查看排行榜
+        </a>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-4">
+        <div class="card text-center p-4 h-100 feature-card">
+            <i class="bi bi-file-earmark-pdf display-4 text-primary"></i>
+            <h5 class="mt-3">上传PDF简历</h5>
+            <p class="text-muted">支持标准PDF格式简历上传，AI自动解析内容</p>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-center p-4 h-100 feature-card">
+            <i class="bi bi-robot display-4 text-success"></i>
+            <h5 class="mt-3">AI多维度评分</h5>
+            <p class="text-muted">ICPC/CCPC实力、实习项目、学校背景、技术栈深度五大维度</p>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-center p-4 h-100 feature-card">
+            <i class="bi bi-trophy display-4 text-warning"></i>
+            <h5 class="mt-3">全网排名</h5>
+            <p class="text-muted">与其他ACMer的简历PK，看看你排第几</p>
+        </div>
+    </div>
+</div>
+
+{{if .Top}}
+<div class="mt-5">
+    <h3 class="text-center mb-4"><i class="bi bi-star"></i> 当前TOP榜</h3>
+    <div class="table-responsive">
+        <table class="table table-hover ranking-table">
+            <thead class="table-dark">
+                <tr>
+                    <th>#</th>
+                    <th>昵称</th>
+                    <th>总分</th>
+                    <th>ICPC/CCPC</th>
+                    <th>实习/项目</th>
+                    <th>学校</th>
+                    <th>技术栈</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{range .Top}}
+                <tr class="{{rankClass .Rank}}">
+                    <td class="fw-bold">{{.Rank}}</td>
+                    <td>{{.Nickname}} {{if .Hidden}}<i class="bi bi-eye-slash text-muted small"></i>{{end}}</td>
+                    <td><span class="badge bg-primary fs-6">{{printf "%.1f" .TotalScore}}</span></td>
+                    <td>{{printf "%.0f" .IcpcScore}}</td>
+                    <td>{{printf "%.0f" .InternScore}}</td>
+                    <td>{{printf "%.0f" .SchoolScore}}</td>
+                    <td>{{printf "%.0f" .TechScore}}</td>
+                </tr>
+                {{end}}
+            </tbody>
+        </table>
+    </div>
+    <p class="text-center text-muted">已有 <strong>{{.Total}}</strong> 份简历参与评分</p>
+</div>
+{{end}}
+{{end}}
+
+{{define "scripts"}}{{end}}
+

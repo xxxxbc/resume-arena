@@ -1,0 +1,40 @@
+{{define "base"}}
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{block "title" .}}Resume Arena - ACMer简历竞技场{{end}}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="/static/css/style.css" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand fw-bold" href="/">
+                <i class="bi bi-trophy"></i> Resume Arena
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="/upload"><i class="bi bi-upload"></i> 上传简历</a>
+                <a class="nav-link" href="/ranking"><i class="bi bi-bar-chart"></i> 排行榜</a>
+                <a class="nav-link" href="/prompt"><i class="bi bi-journal-text"></i> 评分标准</a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container py-4">
+        {{block "content" .}}{{end}}
+    </main>
+
+    <footer class="bg-dark text-light py-3 mt-5">
+        <div class="container text-center">
+            <small>Resume Arena - ACMer简历竞技场 | AI Powered by LLM</small>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    {{block "scripts" .}}{{end}}
+</body>
+</html>
+{{end}}

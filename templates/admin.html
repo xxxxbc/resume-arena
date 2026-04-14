@@ -1,0 +1,147 @@
+{{define "title"}}管理后台 - Resume Arena{{end}}
+
+{{define "content"}}
+{{if .NeedLogin}}
+<div class="row justify-content-center mt-5">
+    <div class="col-md-4">
+        <div class="card shadow">
+            <div class="card-body p-4">
+                <h4 class="text-center mb-4"><i class="bi bi-shield-lock"></i> 管理员登录</h4>
+                {{if .Error}}
+                <div class="alert alert-danger">{{.Error}}</div>
+                {{end}}
+                <form method="POST">
+                    <div class="mb-3">
+                        <label class="form-label">管理密码</label>
+                        <input type="password" name="password" class="form-control" placeholder="请输入管理密码" required autofocus>
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-dark"><i class="bi bi-box-arrow-in-right"></i> 登录</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{{else}}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3><i class="bi bi-gear"></i> 管理后台</h3>
+    <div>
+        <button class="btn btn-warning btn-sm me-2" onclick="rescoreAll()">
+            <i class="bi bi-arrow-repeat"></i> 全部重新评分
+        </button>
+        <span class="badge bg-dark fs-6">共 {{.Total}} 条记录</span>
+    </div>
+</div>
+
+{{if .Resumes}}
+<div class="table-responsive">
+    <table class="table table-hover table-sm align-middle">
+        <thead class="table-dark">
+            <tr>
+                <th>ID</th>
+                <th>昵称</th>
+                <th>文件</th>
+                <th>可见性</th>
+                <th>状态</th>
+                <th>总分</th>
+                <th>时间</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{range .Resumes}}
+            <tr>
+                <td>{{.ID}}</td>
+                <td>
+                    <span id="name-display-{{.ID}}">
+                        <strong>{{.Nickname}}</strong>
+                        <button class="btn btn-sm btn-link p-0 ms-1" onclick="showRename({{.ID}}, '{{.Nickname}}')" title="修改昵称">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                    </span>
+                    <form id="name-form-{{.ID}}" class="d-none" method="POST" action="/admin/rename/{{.ID}}" style="display:inline">
+                        <div class="input-group input-group-sm" style="width:200px">
+                            <input type="text" name="nickname" class="form-control" id="name-input-{{.ID}}" value="{{.Nickname}}">
+                            <button type="submit" class="btn btn-success btn-sm"><i class="bi bi-check"></i></button>
+                            <button type="button" class="btn btn-secondary btn-sm" onclick="hideRename({{.ID}})"><i class="bi bi-x"></i></button>
+                        </div>
+                    </form>
+                </td>
+                <td>
+                    <a href="/file/{{.ShareCode}}" target="_blank" class="text-decoration-none small">
+                        <i class="bi {{fileIcon .FileName}}"></i> 查看
+                    </a>
+                </td>
+                <td>
+                    {{if .Hidden}}
+                    <span class="badge bg-secondary">隐藏</span>
+                    {{else}}
+                    <span class="badge bg-success">公开</span>
+                    {{end}}
+                </td>
+                <td>
+                    {{if eq .Status "done"}}<span class="badge bg-success">完成</span>
+                    {{else if eq .Status "scoring"}}<span class="badge bg-warning text-dark">评分中</span>
+                    {{else if eq .Status "error"}}<span class="badge bg-danger" title="{{.ErrorMsg}}">失败</span>
+                    {{else}}<span class="badge bg-secondary">等待</span>
+                    {{end}}
+                </td>
+                <td>
+                    {{if eq .Status "done"}}
+                    <span class="badge bg-primary">{{printf "%.1f" .TotalScore}}</span>
+                    {{else}}-{{end}}
+                </td>
+                <td class="small text-muted text-nowrap">{{timeFormat .CreatedAt}}</td>
+                <td class="text-nowrap">
+                    <a href="/result/{{.ShareCode}}" class="btn btn-sm btn-outline-primary" title="查看详情">
+                        <i class="bi bi-eye"></i>
+                    </a>
+                    <a href="/admin/toggle-hidden/{{.ID}}" class="btn btn-sm btn-outline-{{if .Hidden}}success{{else}}secondary{{end}}" title="{{if .Hidden}}设为公开{{else}}设为隐藏{{end}}">
+                        <i class="bi bi-{{if .Hidden}}eye{{else}}eye-slash{{end}}"></i>
+                    </a>
+                    <button class="btn btn-sm btn-outline-danger" onclick="confirmDelete({{.ID}}, '{{.Nickname}}')" title="删除">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </td>
+            </tr>
+            {{end}}
+        </tbody>
+    </table>
+</div>
+{{else}}
+<div class="text-center py-5">
+    <i class="bi bi-inbox display-1 text-muted"></i>
+    <p class="text-muted mt-3">暂无数据</p>
+</div>
+{{end}}
+{{end}}
+{{end}}
+
+{{define "scripts"}}
+<script>
+function rescoreAll() {
+    if (!confirm('确定要对所有简历重新评分吗？这可能需要几分钟时间。')) return;
+    fetch('/admin/rescore-all')
+        .then(function(r) { return r.json(); })
+        .then(function(d) { alert(d.message + '\n评分将在后台进行，请稍后刷新查看结果。'); location.reload(); })
+        .catch(function() { alert('操作失败'); });
+}
+function confirmDelete(id, name) {
+    if (confirm('确定要删除 "' + name + '" 的简历吗？此操作不可恢复！')) {
+        window.location.href = '/admin/delete/' + id;
+    }
+}
+function showRename(id, name) {
+    document.getElementById('name-display-' + id).classList.add('d-none');
+    document.getElementById('name-form-' + id).classList.remove('d-none');
+    var input = document.getElementById('name-input-' + id);
+    input.focus();
+    input.select();
+}
+function hideRename(id) {
+    document.getElementById('name-display-' + id).classList.remove('d-none');
+    document.getElementById('name-form-' + id).classList.add('d-none');
+}
+</script>
+{{end}}

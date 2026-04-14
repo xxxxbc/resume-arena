@@ -1,0 +1,91 @@
+:root {
+    --gold: #ffd700;
+    --silver: #c0c0c0;
+    --bronze: #cd7f32;
+}
+
+body {
+    background-color: #f5f7fa;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+main {
+    flex: 1;
+}
+
+.feature-card {
+    border: none;
+    border-radius: 12px;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.feature-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+}
+
+.score-card {
+    border: none;
+    border-radius: 16px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.total-score {
+    font-size: 4rem;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+}
+
+.ranking-table tr.gold {
+    background-color: rgba(255, 215, 0, 0.1);
+}
+
+.ranking-table tr.silver {
+    background-color: rgba(192, 192, 192, 0.1);
+}
+
+.ranking-table tr.bronze {
+    background-color: rgba(205, 127, 50, 0.1);
+}
+
+.ranking-table td, .ranking-table th {
+    vertical-align: middle;
+}
+
+.navbar-brand i {
+    color: #ffd700;
+}
+
+.card {
+    border-radius: 10px;
+}
+
+.btn-group .btn {
+    border-radius: 20px !important;
+    margin: 0 2px;
+}
+
+#loading {
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+    .display-4 {
+        font-size: 2rem;
+    }
+    .total-score {
+        font-size: 3rem;
+    }
+    .btn-group .btn {
+        font-size: 0.8rem;
+        padding: 4px 8px;
+    }
+}

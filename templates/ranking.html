@@ -1,0 +1,72 @@
+{{define "title"}}排行榜 - Resume Arena{{end}}
+
+{{define "content"}}
+<h2 class="text-center mb-4"><i class="bi bi-trophy"></i> ACMer 简历排行榜</h2>
+
+<!-- Sort buttons -->
+<div class="text-center mb-4">
+    <div class="btn-group" role="group">
+        <a href="/ranking?sort=total" class="btn btn-{{if eq .SortBy "total"}}primary{{else}}outline-primary{{end}}">总分</a>
+        <a href="/ranking?sort=icpc" class="btn btn-{{if eq .SortBy "icpc"}}danger{{else}}outline-danger{{end}}">ICPC/CCPC</a>
+        <a href="/ranking?sort=intern" class="btn btn-{{if eq .SortBy "intern"}}success{{else}}outline-success{{end}}">实习/项目</a>
+        <a href="/ranking?sort=school" class="btn btn-{{if eq .SortBy "school"}}info{{else}}outline-info{{end}}">学校</a>
+        <a href="/ranking?sort=tech" class="btn btn-{{if eq .SortBy "tech"}}warning{{else}}outline-warning{{end}}">技术栈</a>
+    </div>
+</div>
+
+{{if .Entries}}
+<div class="table-responsive">
+    <table class="table table-hover ranking-table">
+        <thead class="table-dark">
+            <tr>
+                <th>排名</th>
+                <th>昵称</th>
+                <th>总分</th>
+                <th>ICPC/CCPC</th>
+                <th>实习/项目</th>
+                <th>学校</th>
+                <th>技术栈</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{range .Entries}}
+            <tr class="{{rankClass .Rank}}">
+                <td>
+                    {{if eq .Rank 1}}<i class="bi bi-trophy-fill text-warning"></i>{{end}}
+                    {{if eq .Rank 2}}<i class="bi bi-trophy-fill text-secondary"></i>{{end}}
+                    {{if eq .Rank 3}}<i class="bi bi-trophy-fill" style="color:#cd7f32"></i>{{end}}
+                    <strong>{{.Rank}}</strong>
+                </td>
+                <td class="fw-bold">
+                    {{.Nickname}}
+                    {{if .Hidden}}<i class="bi bi-eye-slash text-muted small" title="简历已隐藏"></i>{{end}}
+                </td>
+                <td><span class="badge bg-primary fs-6">{{printf "%.1f" .TotalScore}}</span></td>
+                <td>{{printf "%.0f" .IcpcScore}}</td>
+                <td>{{printf "%.0f" .InternScore}}</td>
+                <td>{{printf "%.0f" .SchoolScore}}</td>
+                <td>{{printf "%.0f" .TechScore}}</td>
+                <td>
+                    {{if not .Hidden}}
+                    <a href="/file/{{.ShareCode}}" target="_blank" class="btn btn-sm btn-outline-secondary" title="查看原始简历">
+                        <i class="bi {{fileIcon .FileName}}"></i>
+                    </a>
+                    {{end}}
+                    <a href="/result/{{.ShareCode}}" class="btn btn-sm btn-outline-primary">详情</a>
+                </td>
+            </tr>
+            {{end}}
+        </tbody>
+    </table>
+</div>
+{{else}}
+<div class="text-center py-5">
+    <i class="bi bi-inbox display-1 text-muted"></i>
+    <p class="text-muted mt-3">还没有简历参与评分</p>
+    <a href="/upload" class="btn btn-primary">成为第一个！</a>
+</div>
+{{end}}
+{{end}}
+
+{{define "scripts"}}{{end}}

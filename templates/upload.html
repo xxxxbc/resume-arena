@@ -1,0 +1,98 @@
+{{define "title"}}上传简历 - Resume Arena{{end}}
+
+{{define "content"}}
+<div class="row justify-content-center">
+    <div class="col-md-7">
+        <div class="card shadow">
+            <div class="card-body p-4">
+                <h3 class="card-title text-center mb-4">
+                    <i class="bi bi-upload"></i> 上传你的简历
+                </h3>
+
+                <div class="alert alert-warning border-0" style="background-color:#fff3cd">
+                    <h6 class="alert-heading"><i class="bi bi-shield-exclamation"></i> 隐私安全提示</h6>
+                    <hr class="my-2">
+                    <p class="mb-2 small">为了保护你的隐私安全，<strong>上传前请务必模糊或删除以下个人敏感信息</strong>：</p>
+                    <ul class="small mb-0">
+                        <li>真实姓名（可改为 "张同学" 等代称）</li>
+                        <li>身份证号、手机号、邮箱、QQ/微信号</li>
+                        <li>家庭住址、出生日期、证件照片</li>
+                        <li>其他可能定位到你个人身份的信息</li>
+                    </ul>
+                    <p class="small mt-2 mb-0 text-muted">所有上传的简历将公开展示在排行榜上，请谨慎处理！</p>
+                </div>
+
+                {{if .Error}}
+                <div class="alert alert-danger">{{.Error}}</div>
+                {{end}}
+
+                <form method="POST" enctype="multipart/form-data" id="uploadForm">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">昵称 *</label>
+                        <input type="text" name="nickname" class="form-control"
+                               placeholder="你的昵称（将显示在排行榜上）" required maxlength="30">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">简历文件 *</label>
+                        <input type="file" name="resume" class="form-control"
+                               accept=".pdf,.jpg,.jpeg,.png,.docx,.doc" required id="fileInput">
+                        <div class="form-text">
+                            支持格式：<span class="badge bg-danger">PDF</span>
+                            <span class="badge bg-info">JPG/PNG 图片</span>
+                            <span class="badge bg-primary">Word (DOCX)</span>
+                            ，最大10MB
+                        </div>
+                    </div>
+
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" id="agreeCheck" required>
+                        <label class="form-check-label small" for="agreeCheck">
+                            我已确认上传的简历不包含真实姓名、电话、邮箱等敏感个人信息
+                        </label>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input type="checkbox" class="form-check-input" name="hidden" id="hiddenCheck">
+                            <label class="form-check-label" for="hiddenCheck">
+                                隐藏我的简历（不在排行榜和公开页面展示）
+                            </label>
+                        </div>
+                        <div class="form-text text-success small mt-1">
+                            <i class="bi bi-emoji-smile"></i> 为了网站的趣味性和社区氛围，我们建议公开展示简历，和大家一起 PK 才更有意思！隐藏后你仍可通过链接查看自己的评分结果。
+                        </div>
+                    </div>
+
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary btn-lg" id="submitBtn">
+                            <i class="bi bi-send"></i> 提交评分
+                        </button>
+                    </div>
+                </form>
+
+                <div class="mt-4">
+                    <h6>评分维度：</h6>
+                    <div class="row text-center mt-3">
+                        <div class="col"><span class="badge bg-danger">ICPC/CCPC</span><br><small>竞赛实力</small></div>
+                        <div class="col"><span class="badge bg-success">实习/项目</span><br><small>工作经历</small></div>
+                        <div class="col"><span class="badge bg-info">学校</span><br><small>教育背景</small></div>
+                        <div class="col"><span class="badge bg-warning text-dark">技术栈</span><br><small>技术深度</small></div>
+                        <div class="col"><span class="badge bg-secondary">综合</span><br><small>综合素质</small></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{{end}}
+
+{{define "scripts"}}
+<script>
+document.getElementById('uploadForm').addEventListener('submit', function() {
+    var btn = document.getElementById('submitBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> 上传中...';
+});
+</script>
+{{end}}

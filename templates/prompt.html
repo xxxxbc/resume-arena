@@ -1,0 +1,24 @@
+{{define "title"}}评分标准 - Resume Arena{{end}}
+
+{{define "content"}}
+<div class="row justify-content-center">
+    <div class="col-md-10">
+        <h2 class="text-center mb-2"><i class="bi bi-journal-text"></i> AI 评分标准（公开）</h2>
+        <p class="text-center text-muted mb-4">以下是发送给 LLM 的完整评分提示词，完全透明公开。</p>
+
+        <div class="card">
+            <div class="card-body">
+                <pre class="mb-0" style="white-space:pre-wrap;font-size:0.85rem;line-height:1.7;max-height:none">{{.Prompt}}</pre>
+            </div>
+        </div>
+
+        <div class="text-center mt-4 mb-3">
+            <p class="text-muted small">总分计算公式：<code>ICPC/CCPC * 0.3 + 实习/项目 * 0.25 + 学校 * 0.2 + 技术栈 * 0.15 + 综合 * 0.1</code></p>
+            <a href="/upload" class="btn btn-primary"><i class="bi bi-upload"></i> 去上传简历</a>
+            <a href="/ranking" class="btn btn-outline-warning ms-2"><i class="bi bi-bar-chart"></i> 查看排行榜</a>
+        </div>
+    </div>
+</div>
+{{end}}
+
+{{define "scripts"}}{{end}}
