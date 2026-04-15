@@ -187,6 +187,8 @@ type Resume struct {
 	SchoolComment  string    `json:"school_comment"`
 	TechScore      float64   `json:"tech_score"`
 	TechComment    string    `json:"tech_comment"`
+	ResearchScore   float64   `json:"research_score"`
+	ResearchComment string    `json:"research_comment"`
 	OverallScore   float64   `json:"overall_score"`
 	OverallComment string    `json:"overall_comment"`
 	Suggestions    []string  `json:"suggestions"`
@@ -196,6 +198,8 @@ type Resume struct {
 	ErrorMsg       string    `json:"error_msg"`
 	ShareCode      string    `json:"share_code"`
 	Hidden         bool      `json:"hidden"`
+	UserID         int       `json:"user_id"` // 0=anonymous
+	Likes          int       `json:"likes"`
 	CreatedAt      time.Time `json:"created_at"`
 }
 
@@ -229,17 +233,54 @@ type DimScore struct {
 	Comment string  `json:"comment"`
 }
 
+// ============ User Model ============
+
+type User struct {
+	ID        int       `json:"id"`
+	Username  string    `json:"username"`
+	Password  string    `json:"password"` // SHA256 hash
+	CreatedAt time.Time `json:"created_at"`
+}
+
+type Session struct {
+	UserID    int       `json:"user_id"`
+	Token     string    `json:"token"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+const sessionSecret = "resume-arena-session-2026"
+
+type Comment struct {
+	ID        int       `json:"id"`
+	ResumeID  int       `json:"resume_id"`
+	UserID    int       `json:"user_id"`
+	Username  string    `json:"username"`
+	Content   string    `json:"content"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+type LikeRecord struct {
+	ResumeID int    `json:"resume_id"`
+	IP       string `json:"ip"`
+}
+
 // ============ JSON File Store ============
 
 type DataStore struct {
-	mu      sync.RWMutex
-	Resumes []Resume `json:"resumes"`
-	NextID  int      `json:"next_id"`
-	path    string
+	mu            sync.RWMutex
+	Resumes       []Resume     `json:"resumes"`
+	NextID        int          `json:"next_id"`
+	Users         []User       `json:"users"`
+	NextUserID    int          `json:"next_user_id"`
+	Sessions      []Session    `json:"sessions"`
+	Comments      []Comment    `json:"comments"`
+	NextCommentID int          `json:"next_comment_id"`
+	LikeRecords   []LikeRecord `json:"like_records"`
+	path          string
 }
 
 func NewDataStore(path string) *DataStore {
-	ds := &DataStore{path: path, NextID: 1}
+	ds := &DataStore{path: path, NextID: 1, NextUserID: 1, NextCommentID: 1}
 	data, err := os.ReadFile(path)
 	if err == nil {
 		json.Unmarshal(data, ds)
@@ -346,10 +387,348 @@ func (ds *DataStore) GetPublicDoneResumes() []Resume {
 	return result
 }
 
+// User methods
+
+func hashPassword(pw string) string {
+	h := sha256.Sum256([]byte(pw + sessionSecret))
+	return hex.EncodeToString(h[:])
+}
+
+func (ds *DataStore) CreateUser(username, password string) (*User, error) {
+	ds.mu.Lock()
+	defer ds.mu.Unlock()
+	// Check duplicate
+	for _, u := range ds.Users {
+		if u.Username == username {
+			return nil, fmt.Errorf("用户名已存在")
+		}
+	}
+	user := User{
+		ID:        ds.NextUserID,
+		Username:  username,
+		Password:  hashPassword(password),
+		CreatedAt: time.Now(),
+	}
+	ds.NextUserID++
+	ds.Users = append(ds.Users, user)
+	ds.save()
+	return &user, nil
+}
+
+func (ds *DataStore) AuthUser(username, password string) *User {
+	ds.mu.RLock()
+	defer ds.mu.RUnlock()
+	hashed := hashPassword(password)
+	for i := range ds.Users {
+		if ds.Users[i].Username == username && ds.Users[i].Password == hashed {
+			u := ds.Users[i]
+			return &u
+		}
+	}
+	return nil
+}
+
+func (ds *DataStore) GetUserByID(id int) *User {
+	ds.mu.RLock()
+	defer ds.mu.RUnlock()
+	for i := range ds.Users {
+		if ds.Users[i].ID == id {
+			u := ds.Users[i]
+			return &u
+		}
+	}
+	return nil
+}
+
+func (ds *DataStore) CreateSession(userID int) string {
+	ds.mu.Lock()
+	defer ds.mu.Unlock()
+	token := fmt.Sprintf("%x", sha256.Sum256([]byte(fmt.Sprintf("%d-%d-%s", userID, time.Now().UnixNano(), sessionSecret))))
+	ds.Sessions = append(ds.Sessions, Session{
+		UserID:    userID,
+		Token:     token,
+		CreatedAt: time.Now(),
+	})
+	ds.save()
+	return token
+}
+
+func (ds *DataStore) GetUserBySession(token string) *User {
+	ds.mu.RLock()
+	defer ds.mu.RUnlock()
+	if token == "" {
+		return nil
+	}
+	for _, s := range ds.Sessions {
+		if s.Token == token && time.Since(s.CreatedAt) < 7*24*time.Hour {
+			for i := range ds.Users {
+				if ds.Users[i].ID == s.UserID {
+					u := ds.Users[i]
+					return &u
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func (ds *DataStore) DeleteSession(token string) {
+	ds.mu.Lock()
+	defer ds.mu.Unlock()
+	for i := range ds.Sessions {
+		if ds.Sessions[i].Token == token {
+			ds.Sessions = append(ds.Sessions[:i], ds.Sessions[i+1:]...)
+			ds.save()
+			return
+		}
+	}
+}
+
+func (ds *DataStore) GetResumesByUserID(userID int) []Resume {
+	ds.mu.RLock()
+	defer ds.mu.RUnlock()
+	var result []Resume
+	for _, r := range ds.Resumes {
+		if r.UserID == userID {
+			result = append(result, r)
+		}
+	}
+	return result
+}
+
+// Comment methods
+
+func (ds *DataStore) AddComment(resumeID, userID int, username, content string) {
+	ds.mu.Lock()
+	defer ds.mu.Unlock()
+	ds.Comments = append(ds.Comments, Comment{
+		ID:        ds.NextCommentID,
+		ResumeID:  resumeID,
+		UserID:    userID,
+		Username:  username,
+		Content:   sanitizeNickname(content),
+		CreatedAt: time.Now(),
+	})
+	ds.NextCommentID++
+	ds.save()
+}
+
+func (ds *DataStore) GetComments(resumeID int) []Comment {
+	ds.mu.RLock()
+	defer ds.mu.RUnlock()
+	var result []Comment
+	for _, c := range ds.Comments {
+		if c.ResumeID == resumeID {
+			result = append(result, c)
+		}
+	}
+	return result
+}
+
+func (ds *DataStore) DeleteComment(commentID int) {
+	ds.mu.Lock()
+	defer ds.mu.Unlock()
+	for i := range ds.Comments {
+		if ds.Comments[i].ID == commentID {
+			ds.Comments = append(ds.Comments[:i], ds.Comments[i+1:]...)
+			ds.save()
+			return
+		}
+	}
+}
+
+// Like methods
+
+func (ds *DataStore) AddLike(resumeID int, ip string) bool {
+	ds.mu.Lock()
+	defer ds.mu.Unlock()
+	// Check if already liked
+	for _, l := range ds.LikeRecords {
+		if l.ResumeID == resumeID && l.IP == ip {
+			return false
+		}
+	}
+	ds.LikeRecords = append(ds.LikeRecords, LikeRecord{ResumeID: resumeID, IP: ip})
+	for i := range ds.Resumes {
+		if ds.Resumes[i].ID == resumeID {
+			ds.Resumes[i].Likes++
+			break
+		}
+	}
+	ds.save()
+	return true
+}
+
+func (ds *DataStore) HasLiked(resumeID int, ip string) bool {
+	ds.mu.RLock()
+	defer ds.mu.RUnlock()
+	for _, l := range ds.LikeRecords {
+		if l.ResumeID == resumeID && l.IP == ip {
+			return true
+		}
+	}
+	return false
+}
+
+// Week helpers
+
+func getWeekKey(t time.Time) string {
+	y, w := t.ISOWeek()
+	return fmt.Sprintf("%d-W%02d", y, w)
+}
+
+func (ds *DataStore) GetWeeklyResumes() []Resume {
+	ds.mu.RLock()
+	defer ds.mu.RUnlock()
+	currentWeek := getWeekKey(time.Now())
+	var result []Resume
+	for _, r := range ds.Resumes {
+		if r.Status == "done" && getWeekKey(r.CreatedAt) == currentWeek {
+			result = append(result, r)
+		}
+	}
+	return result
+}
+
+// Stats helpers
+
+func (ds *DataStore) GetStats() map[string]interface{} {
+	ds.mu.RLock()
+	defer ds.mu.RUnlock()
+
+	done := 0
+	var totalScore, totalIcpc, totalIntern, totalSchool, totalTech, totalResearch float64
+	scoreDist := map[string]int{"90+": 0, "80-89": 0, "70-79": 0, "60-69": 0, "50-59": 0, "<50": 0}
+	jobCounts := map[string]int{}
+
+	for _, r := range ds.Resumes {
+		if r.Status != "done" {
+			continue
+		}
+		done++
+		totalScore += r.TotalScore
+		totalIcpc += r.IcpcScore
+		totalIntern += r.InternScore
+		totalSchool += r.SchoolScore
+		totalTech += r.TechScore
+		totalResearch += r.ResearchScore
+
+		switch {
+		case r.TotalScore >= 90:
+			scoreDist["90+"]++
+		case r.TotalScore >= 80:
+			scoreDist["80-89"]++
+		case r.TotalScore >= 70:
+			scoreDist["70-79"]++
+		case r.TotalScore >= 60:
+			scoreDist["60-69"]++
+		case r.TotalScore >= 50:
+			scoreDist["50-59"]++
+		default:
+			scoreDist["<50"]++
+		}
+
+		for _, jm := range r.JobMatches {
+			if jm.Score >= 60 {
+				jobCounts[jm.Title]++
+			}
+		}
+	}
+
+	avg := func(v float64) float64 {
+		if done == 0 {
+			return 0
+		}
+		return math.Round(v/float64(done)*10) / 10
+	}
+
+	// Top 5 job directions
+	type jobEntry struct {
+		Name  string
+		Count int
+	}
+	var topJobs []jobEntry
+	for k, v := range jobCounts {
+		topJobs = append(topJobs, jobEntry{k, v})
+	}
+	sort.Slice(topJobs, func(i, j int) bool { return topJobs[i].Count > topJobs[j].Count })
+	if len(topJobs) > 8 {
+		topJobs = topJobs[:8]
+	}
+
+	return map[string]interface{}{
+		"Total":      done,
+		"Users":      len(ds.Users),
+		"AvgScore":   avg(totalScore),
+		"AvgIcpc":    avg(totalIcpc),
+		"AvgIntern":  avg(totalIntern),
+		"AvgSchool":  avg(totalSchool),
+		"AvgTech":     avg(totalTech),
+		"AvgResearch": avg(totalResearch),
+		"ScoreDist":  scoreDist,
+		"TopJobs":    topJobs,
+	}
+}
+
+// Achievement badges
+
+func getAchievements(r *Resume, rank, total int) []string {
+	var badges []string
+	if r.TotalScore >= 90 {
+		badges = append(badges, "S-Tier")
+	}
+	if r.IcpcScore >= 88 {
+		badges = append(badges, "ICPC Legend")
+	} else if r.IcpcScore >= 78 {
+		badges = append(badges, "ICPC Master")
+	} else if r.IcpcScore >= 65 {
+		badges = append(badges, "ICPC Pro")
+	}
+	if r.InternScore >= 88 {
+		badges = append(badges, "Big Tech Star")
+	}
+	if r.TechScore >= 85 {
+		badges = append(badges, "Tech Guru")
+	}
+	if r.SchoolScore >= 90 {
+		badges = append(badges, "Top School")
+	}
+	if total > 0 && rank <= total/10+1 {
+		badges = append(badges, "Top 10%")
+	}
+	if rank == 1 {
+		badges = append(badges, "Champion")
+	} else if rank <= 3 {
+		badges = append(badges, "Podium")
+	}
+	if r.OverallScore >= 80 {
+		badges = append(badges, "Resume Expert")
+	}
+	return badges
+}
+
+func getCurrentUser(r *http.Request) *User {
+	cookie, err := r.Cookie("user_session")
+	if err != nil {
+		return nil
+	}
+	return store.GetUserBySession(cookie.Value)
+}
+
+// render helper: auto-injects CurrentUser into template data
+func render(w http.ResponseWriter, r *http.Request, page string, data map[string]interface{}) {
+	if data == nil {
+		data = map[string]interface{}{}
+	}
+	data["CurrentUser"] = getCurrentUser(r)
+	pageTmpls[page].ExecuteTemplate(w, "base", data)
+}
+
 // ============ Main ============
 
 func main() {
 	store = NewDataStore("data.json")
+	loadSchoolScores()
 	loadPrompt()
 	initTemplates()
 	os.MkdirAll("uploads", 0755)
@@ -357,9 +736,17 @@ func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", handleIndex)
 	mux.HandleFunc("/upload", handleUpload)
+	mux.HandleFunc("/login", handleLogin)
+	mux.HandleFunc("/register", handleRegister)
+	mux.HandleFunc("/logout", handleLogout)
+	mux.HandleFunc("/profile", handleProfile)
 	mux.HandleFunc("/result/", handleResult)
 	mux.HandleFunc("/ranking", handleRanking)
+	mux.HandleFunc("/board/", handleBoard)
+	mux.HandleFunc("/stats", handleStats)
 	mux.HandleFunc("/api/status/", handleStatus)
+	mux.HandleFunc("/api/like/", handleLike)
+	mux.HandleFunc("/api/comment/", handleComment)
 	mux.HandleFunc("/file/", handleFile)
 	mux.HandleFunc("/prompt", handlePrompt)
 	mux.HandleFunc("/admin", handleAdmin)
@@ -412,7 +799,7 @@ func initTemplates() {
 		},
 	}
 
-	pages := []string{"index", "upload", "result", "ranking", "admin", "prompt"}
+	pages := []string{"index", "upload", "result", "ranking", "admin", "prompt", "login", "profile", "board", "stats"}
 	pageTmpls = make(map[string]*template.Template)
 	for _, p := range pages {
 		pageTmpls[p] = template.Must(
@@ -427,16 +814,17 @@ func initTemplates() {
 // ============ Handlers ============
 
 type RankEntry struct {
-	Rank        int
-	Nickname    string
-	TotalScore  float64
-	IcpcScore   float64
-	InternScore float64
-	SchoolScore float64
-	TechScore   float64
-	ShareCode   string
-	FileName    string
-	Hidden      bool
+	Rank          int
+	Nickname      string
+	TotalScore    float64
+	IcpcScore     float64
+	InternScore   float64
+	SchoolScore   float64
+	TechScore     float64
+	ResearchScore float64
+	ShareCode     string
+	FileName      string
+	Hidden        bool
 }
 
 func handleIndex(w http.ResponseWriter, r *http.Request) {
@@ -463,15 +851,16 @@ func handleIndex(w http.ResponseWriter, r *http.Request) {
 			IcpcScore:   d.IcpcScore,
 			InternScore: d.InternScore,
 			SchoolScore: d.SchoolScore,
-			TechScore:   d.TechScore,
-			ShareCode:   d.ShareCode,
-			FileName:    d.FileName,
-			Hidden:      d.Hidden,
+			TechScore:     d.TechScore,
+			ResearchScore: d.ResearchScore,
+			ShareCode:     d.ShareCode,
+			FileName:      d.FileName,
+			Hidden:        d.Hidden,
 		}
 	}
 
 	allDone := store.GetDoneResumes()
-	pageTmpls["index"].ExecuteTemplate(w, "base", map[string]interface{}{
+	render(w, r, "index", map[string]interface{}{
 		"Top":   top,
 		"Total": len(allDone),
 	})
@@ -479,14 +868,14 @@ func handleIndex(w http.ResponseWriter, r *http.Request) {
 
 func handleUpload(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "GET" {
-		pageTmpls["upload"].ExecuteTemplate(w, "base", map[string]interface{}{})
+		render(w, r, "upload", map[string]interface{}{})
 		return
 	}
 
 	// Rate limit: max 5 uploads per minute per IP
 	ip := getClientIP(r)
 	if !uploadLimiter.Allow(ip, 5) {
-		pageTmpls["upload"].ExecuteTemplate(w, "base", map[string]interface{}{
+		render(w, r, "upload", map[string]interface{}{
 			"Error": "上传太频繁，请稍后再试",
 		})
 		return
@@ -496,7 +885,7 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 
 	nickname := sanitizeNickname(r.FormValue("nickname"))
 	if nickname == "" {
-		pageTmpls["upload"].ExecuteTemplate(w, "base", map[string]interface{}{
+		render(w, r, "upload", map[string]interface{}{
 			"Error": "请输入昵称",
 		})
 		return
@@ -504,7 +893,7 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 
 	file, header, err := r.FormFile("resume")
 	if err != nil {
-		pageTmpls["upload"].ExecuteTemplate(w, "base", map[string]interface{}{
+		render(w, r, "upload", map[string]interface{}{
 			"Error": "请上传简历文件",
 		})
 		return
@@ -513,14 +902,14 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 
 	ext := strings.ToLower(filepath.Ext(header.Filename))
 	if !allowedExts[ext] {
-		pageTmpls["upload"].ExecuteTemplate(w, "base", map[string]interface{}{
+		render(w, r, "upload", map[string]interface{}{
 			"Error": "不支持的文件格式，请上传 PDF、图片(JPG/PNG) 或 Word(DOCX) 文件",
 		})
 		return
 	}
 
 	if header.Size > 10<<20 {
-		pageTmpls["upload"].ExecuteTemplate(w, "base", map[string]interface{}{
+		render(w, r, "upload", map[string]interface{}{
 			"Error": "文件大小不能超过10MB",
 		})
 		return
@@ -529,7 +918,7 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 	// Read file content for magic byte validation
 	fileBytes, err := io.ReadAll(file)
 	if err != nil {
-		pageTmpls["upload"].ExecuteTemplate(w, "base", map[string]interface{}{
+		render(w, r, "upload", map[string]interface{}{
 			"Error": "文件读取失败",
 		})
 		return
@@ -538,7 +927,7 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 	// Validate file magic bytes (prevent disguised files)
 	if !validateFileMagic(fileBytes, ext) {
 		log.Printf("[SECURITY] Invalid file magic from IP %s: claimed %s but magic mismatch", ip, ext)
-		pageTmpls["upload"].ExecuteTemplate(w, "base", map[string]interface{}{
+		render(w, r, "upload", map[string]interface{}{
 			"Error": "文件内容与格式不匹配，请上传真实的简历文件",
 		})
 		return
@@ -554,11 +943,17 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	userID := 0
+	if user := getCurrentUser(r); user != nil {
+		userID = user.ID
+	}
+
 	resume := &Resume{
 		Nickname:  nickname,
 		FileName:  fileName,
 		ShareCode: shareCode,
 		Hidden:    hidden,
+		UserID:    userID,
 		Status:    "pending",
 	}
 	id := store.Add(resume)
@@ -592,13 +987,21 @@ func handleResult(w http.ResponseWriter, r *http.Request) {
 		rank++
 	}
 
-	pageTmpls["result"].ExecuteTemplate(w, "base", map[string]interface{}{
-		"Resume": resume,
-		"Rank":   rank,
-		"Total":  len(store.GetDoneResumes()),
+	total := len(store.GetDoneResumes())
+	badges := getAchievements(resume, rank, total)
+	comments := store.GetComments(resume.ID)
+	hasLiked := store.HasLiked(resume.ID, getClientIP(r))
+
+	render(w, r, "result", map[string]interface{}{
+		"Resume":   resume,
+		"Rank":     rank,
+		"Total":    total,
+		"Badges":   badges,
+		"Comments": comments,
+		"HasLiked": hasLiked,
 		"Scores": []float64{
 			resume.IcpcScore, resume.InternScore,
-			resume.SchoolScore, resume.TechScore, resume.OverallScore,
+			resume.SchoolScore, resume.TechScore, resume.ResearchScore, resume.OverallScore,
 		},
 	})
 }
@@ -616,6 +1019,8 @@ func handleRanking(w http.ResponseWriter, r *http.Request) {
 		sort.Slice(done, func(i, j int) bool { return done[i].SchoolScore > done[j].SchoolScore })
 	case "tech":
 		sort.Slice(done, func(i, j int) bool { return done[i].TechScore > done[j].TechScore })
+	case "research":
+		sort.Slice(done, func(i, j int) bool { return done[i].ResearchScore > done[j].ResearchScore })
 	default:
 		sortBy = "total"
 		sort.Slice(done, func(i, j int) bool { return done[i].TotalScore > done[j].TotalScore })
@@ -630,14 +1035,15 @@ func handleRanking(w http.ResponseWriter, r *http.Request) {
 			IcpcScore:   d.IcpcScore,
 			InternScore: d.InternScore,
 			SchoolScore: d.SchoolScore,
-			TechScore:   d.TechScore,
-			ShareCode:   d.ShareCode,
-			FileName:    d.FileName,
-			Hidden:      d.Hidden,
+			TechScore:     d.TechScore,
+			ResearchScore: d.ResearchScore,
+			ShareCode:     d.ShareCode,
+			FileName:      d.FileName,
+			Hidden:        d.Hidden,
 		}
 	}
 
-	pageTmpls["ranking"].ExecuteTemplate(w, "base", map[string]interface{}{
+	render(w, r, "ranking", map[string]interface{}{
 		"Entries": entries,
 		"SortBy":  sortBy,
 	})
@@ -659,8 +1065,267 @@ func handleStatus(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func handleLogin(w http.ResponseWriter, r *http.Request) {
+	if getCurrentUser(r) != nil {
+		http.Redirect(w, r, "/profile", http.StatusSeeOther)
+		return
+	}
+	if r.Method == "GET" {
+		render(w, r, "login", map[string]interface{}{"Tab": "login"})
+		return
+	}
+	ip := getClientIP(r)
+	if !adminLimiter.Allow(ip, 10) {
+		render(w, r, "login", map[string]interface{}{
+			"Tab": "login", "LoginError": "尝试太频繁，请稍后再试",
+		})
+		return
+	}
+	r.ParseForm()
+	username := sanitizeNickname(r.FormValue("username"))
+	password := r.FormValue("password")
+
+	user := store.AuthUser(username, password)
+	if user == nil {
+		render(w, r, "login", map[string]interface{}{
+			"Tab": "login", "LoginError": "用户名或密码错误",
+		})
+		return
+	}
+
+	token := store.CreateSession(user.ID)
+	http.SetCookie(w, &http.Cookie{
+		Name: "user_session", Value: token, Path: "/",
+		MaxAge: 7 * 86400, HttpOnly: true, SameSite: http.SameSiteLaxMode,
+	})
+	http.Redirect(w, r, "/profile", http.StatusSeeOther)
+}
+
+func handleRegister(w http.ResponseWriter, r *http.Request) {
+	if getCurrentUser(r) != nil {
+		http.Redirect(w, r, "/profile", http.StatusSeeOther)
+		return
+	}
+	if r.Method != "POST" {
+		render(w, r, "login", map[string]interface{}{"Tab": "register"})
+		return
+	}
+	ip := getClientIP(r)
+	if !adminLimiter.Allow(ip, 5) {
+		render(w, r, "login", map[string]interface{}{
+			"Tab": "register", "RegError": "操作太频繁，请稍后再试",
+		})
+		return
+	}
+	r.ParseForm()
+	username := sanitizeNickname(r.FormValue("username"))
+	password := r.FormValue("password")
+	password2 := r.FormValue("password2")
+
+	if len(username) < 2 || len(username) > 20 {
+		render(w, r, "login", map[string]interface{}{
+			"Tab": "register", "RegError": "用户名长度需要2-20个字符",
+		})
+		return
+	}
+	if len(password) < 6 {
+		render(w, r, "login", map[string]interface{}{
+			"Tab": "register", "RegError": "密码至少6个字符",
+		})
+		return
+	}
+	if password != password2 {
+		render(w, r, "login", map[string]interface{}{
+			"Tab": "register", "RegError": "两次密码不一致",
+		})
+		return
+	}
+
+	user, err := store.CreateUser(username, password)
+	if err != nil {
+		render(w, r, "login", map[string]interface{}{
+			"Tab": "register", "RegError": err.Error(),
+		})
+		return
+	}
+
+	token := store.CreateSession(user.ID)
+	http.SetCookie(w, &http.Cookie{
+		Name: "user_session", Value: token, Path: "/",
+		MaxAge: 7 * 86400, HttpOnly: true, SameSite: http.SameSiteLaxMode,
+	})
+	http.Redirect(w, r, "/profile", http.StatusSeeOther)
+}
+
+func handleLogout(w http.ResponseWriter, r *http.Request) {
+	cookie, err := r.Cookie("user_session")
+	if err == nil {
+		store.DeleteSession(cookie.Value)
+	}
+	http.SetCookie(w, &http.Cookie{
+		Name: "user_session", Value: "", Path: "/", MaxAge: -1,
+	})
+	http.Redirect(w, r, "/", http.StatusSeeOther)
+}
+
+func handleProfile(w http.ResponseWriter, r *http.Request) {
+	user := getCurrentUser(r)
+	if user == nil {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	resumes := store.GetResumesByUserID(user.ID)
+	sort.Slice(resumes, func(i, j int) bool {
+		return resumes[i].CreatedAt.After(resumes[j].CreatedAt)
+	})
+
+	render(w, r, "profile", map[string]interface{}{
+		"User":    user,
+		"Resumes": resumes,
+		"Count":   len(resumes),
+	})
+}
+
+func handleBoard(w http.ResponseWriter, r *http.Request) {
+	boardType := strings.TrimPrefix(r.URL.Path, "/board/")
+	if boardType == "" {
+		boardType = "icpc"
+	}
+
+	boards := map[string]struct {
+		Title   string
+		SortFn  func(a, b Resume) bool
+		ScoreFn func(r Resume) float64
+	}{
+		"icpc": {
+			"ICPC/CCPC 竞赛榜",
+			func(a, b Resume) bool { return a.IcpcScore > b.IcpcScore },
+			func(r Resume) float64 { return r.IcpcScore },
+		},
+		"intern": {
+			"实习/项目榜",
+			func(a, b Resume) bool { return a.InternScore > b.InternScore },
+			func(r Resume) float64 { return r.InternScore },
+		},
+		"school": {
+			"学校背景榜",
+			func(a, b Resume) bool { return a.SchoolScore > b.SchoolScore },
+			func(r Resume) float64 { return r.SchoolScore },
+		},
+		"tech": {
+			"技术栈榜",
+			func(a, b Resume) bool { return a.TechScore > b.TechScore },
+			func(r Resume) float64 { return r.TechScore },
+		},
+		"research": {
+			"科研/论文榜",
+			func(a, b Resume) bool { return a.ResearchScore > b.ResearchScore },
+			func(r Resume) float64 { return r.ResearchScore },
+		},
+	}
+
+	board, ok := boards[boardType]
+	if !ok {
+		http.Redirect(w, r, "/board/icpc", http.StatusSeeOther)
+		return
+	}
+
+	done := store.GetDoneResumes()
+	sort.Slice(done, func(i, j int) bool { return board.SortFn(done[i], done[j]) })
+	if len(done) > 50 {
+		done = done[:50]
+	}
+
+	type BoardEntry struct {
+		Rank       int
+		Nickname   string
+		MainScore  float64
+		TotalScore float64
+		ShareCode  string
+		Hidden     bool
+		FileName   string
+	}
+	entries := make([]BoardEntry, len(done))
+	for i, d := range done {
+		entries[i] = BoardEntry{
+			Rank:       i + 1,
+			Nickname:   d.Nickname,
+			MainScore:  board.ScoreFn(d),
+			TotalScore: d.TotalScore,
+			ShareCode:  d.ShareCode,
+			Hidden:     d.Hidden,
+			FileName:   d.FileName,
+		}
+	}
+
+	render(w, r, "board", map[string]interface{}{
+		"Entries":   entries,
+		"BoardType": boardType,
+		"Title":     board.Title,
+	})
+}
+
+func handleStats(w http.ResponseWriter, r *http.Request) {
+	stats := store.GetStats()
+	render(w, r, "stats", stats)
+}
+
+func handleLike(w http.ResponseWriter, r *http.Request) {
+	code := strings.TrimPrefix(r.URL.Path, "/api/like/")
+	resume := store.GetByShareCode(code)
+	if resume == nil {
+		http.Error(w, "not found", 404)
+		return
+	}
+	ip := getClientIP(r)
+	ok := store.AddLike(resume.ID, ip)
+	w.Header().Set("Content-Type", "application/json")
+	likes := resume.Likes
+	if ok {
+		likes++
+	}
+	json.NewEncoder(w).Encode(map[string]interface{}{"ok": ok, "likes": likes})
+}
+
+func handleComment(w http.ResponseWriter, r *http.Request) {
+	code := strings.TrimPrefix(r.URL.Path, "/api/comment/")
+	resume := store.GetByShareCode(code)
+	if resume == nil {
+		http.Error(w, "not found", 404)
+		return
+	}
+
+	if r.Method == "POST" {
+		user := getCurrentUser(r)
+		if user == nil {
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]string{"error": "请先登录"})
+			return
+		}
+		ip := getClientIP(r)
+		if !uploadLimiter.Allow(ip, 10) {
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]string{"error": "评论太频繁"})
+			return
+		}
+		r.ParseForm()
+		content := strings.TrimSpace(r.FormValue("content"))
+		if len(content) < 1 || len([]rune(content)) > 200 {
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]string{"error": "评论长度1-200字"})
+			return
+		}
+		store.AddComment(resume.ID, user.ID, user.Username, content)
+	}
+
+	comments := store.GetComments(resume.ID)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(comments)
+}
+
 func handlePrompt(w http.ResponseWriter, r *http.Request) {
-	pageTmpls["prompt"].ExecuteTemplate(w, "base", map[string]interface{}{
+	render(w, r, "prompt", map[string]interface{}{
 		"Prompt": scoringPrompt,
 	})
 }
@@ -725,7 +1390,7 @@ func handleAdmin(w http.ResponseWriter, r *http.Request) {
 		// Rate limit admin login: max 5 attempts per minute per IP
 		ip := getClientIP(r)
 		if !adminLimiter.Allow(ip, 5) {
-			pageTmpls["admin"].ExecuteTemplate(w, "base", map[string]interface{}{
+			render(w, r, "admin", map[string]interface{}{
 				"NeedLogin": true,
 				"Error":     "登录尝试太频繁，请稍后再试",
 			})
@@ -739,7 +1404,7 @@ func handleAdmin(w http.ResponseWriter, r *http.Request) {
 			isAuthed = true
 		} else {
 			log.Printf("[SECURITY] Failed admin login from IP %s", ip)
-			pageTmpls["admin"].ExecuteTemplate(w, "base", map[string]interface{}{
+			render(w, r, "admin", map[string]interface{}{
 				"NeedLogin": true,
 				"Error":     "密码错误",
 			})
@@ -748,7 +1413,7 @@ func handleAdmin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if !isAuthed {
-		pageTmpls["admin"].ExecuteTemplate(w, "base", map[string]interface{}{
+		render(w, r, "admin", map[string]interface{}{
 			"NeedLogin": true,
 		})
 		return
@@ -760,7 +1425,7 @@ func handleAdmin(w http.ResponseWriter, r *http.Request) {
 		return all[i].CreatedAt.After(all[j].CreatedAt)
 	})
 
-	pageTmpls["admin"].ExecuteTemplate(w, "base", map[string]interface{}{
+	render(w, r, "admin", map[string]interface{}{
 		"Authed":  true,
 		"Resumes": all,
 		"Total":   len(all),
@@ -908,18 +1573,24 @@ func scoreResume(id int, filePath string) {
 		intern := result.Dimensions["internship_project"]
 		school := result.Dimensions["school"]
 		tech := result.Dimensions["tech_stack"]
+		research := result.Dimensions["research"]
 		overall := result.Dimensions["overall"]
 
-		// Calculate total score ourselves - don't trust AI's math
-		r.TotalScore = math.Round((icpc.Score*0.3+intern.Score*0.25+school.Score*0.2+tech.Score*0.15+overall.Score*0.1)*10) / 10
+		// Override school score with hardcoded mapping if found
+		schoolScore := overrideSchoolScore(school.Score, school.Comment)
+
+		// New weights: ICPC 25%, Intern 20%, School 15%, Tech 15%, Research 15%, Overall 10%
+		r.TotalScore = math.Round((icpc.Score*0.25+intern.Score*0.20+schoolScore*0.15+tech.Score*0.15+research.Score*0.15+overall.Score*0.10)*10) / 10
 		r.IcpcScore = icpc.Score
 		r.IcpcComment = icpc.Comment
 		r.InternScore = intern.Score
 		r.InternComment = intern.Comment
-		r.SchoolScore = school.Score
+		r.SchoolScore = schoolScore
 		r.SchoolComment = school.Comment
 		r.TechScore = tech.Score
 		r.TechComment = tech.Comment
+		r.ResearchScore = research.Score
+		r.ResearchComment = research.Comment
 		r.OverallScore = overall.Score
 		r.OverallComment = overall.Comment
 		r.Suggestions = result.Suggestions
@@ -1034,6 +1705,76 @@ func parseDocXML(r io.Reader) (string, error) {
 // ============ AI Scoring ============
 
 var scoringPrompt string
+
+// School score mapping
+var schoolScores map[string]float64
+
+func loadSchoolScores() {
+	data, err := os.ReadFile("schools.json")
+	if err != nil {
+		log.Printf("Warning: schools.json not found, using AI scores only")
+		return
+	}
+	var raw map[string]json.RawMessage
+	json.Unmarshal(data, &raw)
+
+	schoolScores = make(map[string]float64)
+	for _, v := range raw {
+		var group map[string]interface{}
+		if json.Unmarshal(v, &group) == nil {
+			for name, score := range group {
+				if strings.HasPrefix(name, "_") {
+					continue
+				}
+				if s, ok := score.(float64); ok {
+					schoolScores[strings.ToLower(name)] = s
+				}
+			}
+		}
+	}
+	log.Printf("Loaded %d school score mappings", len(schoolScores))
+}
+
+func lookupSchoolScore(schoolName string) (float64, bool) {
+	if schoolScores == nil {
+		return 0, false
+	}
+	name := strings.ToLower(strings.TrimSpace(schoolName))
+	// Try exact match
+	if s, ok := schoolScores[name]; ok {
+		return s, true
+	}
+	// Try substring match
+	for k, v := range schoolScores {
+		if strings.Contains(name, k) || strings.Contains(k, name) {
+			return v, true
+		}
+	}
+	return 0, false
+}
+
+func overrideSchoolScore(aiScore float64, comment string) float64 {
+	// Try to find school name in the AI comment and look up hardcoded score
+	if schoolScores == nil {
+		return aiScore
+	}
+	// Search comment for any known school name
+	commentLower := strings.ToLower(comment)
+	bestScore := 0.0
+	found := false
+	for name, score := range schoolScores {
+		if strings.Contains(commentLower, strings.ToLower(name)) {
+			if score > bestScore {
+				bestScore = score
+				found = true
+			}
+		}
+	}
+	if found {
+		return bestScore
+	}
+	return aiScore
+}
 
 func loadPrompt() {
 	data, err := os.ReadFile("prompt.txt")

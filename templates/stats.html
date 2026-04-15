@@ -1,0 +1,120 @@
+{{define "title"}}数据统计 - Resume Arena{{end}}
+
+{{define "content"}}
+<h2 class="text-center mb-4"><i class="bi bi-graph-up"></i> 全站数据统计</h2>
+
+<!-- Overview Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card text-center border-0 shadow-sm">
+            <div class="card-body">
+                <div class="display-5 fw-bold text-primary">{{.Total}}</div>
+                <small class="text-muted">简历总数</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center border-0 shadow-sm">
+            <div class="card-body">
+                <div class="display-5 fw-bold text-success">{{.Users}}</div>
+                <small class="text-muted">注册用户</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center border-0 shadow-sm">
+            <div class="card-body">
+                <div class="display-5 fw-bold text-warning">{{.AvgScore}}</div>
+                <small class="text-muted">平均总分</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center border-0 shadow-sm">
+            <div class="card-body">
+                <div class="display-5 fw-bold text-danger">{{.AvgIcpc}}</div>
+                <small class="text-muted">平均ICPC分</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Average by dimension -->
+<div class="row g-3 mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <h5>各维度平均分</h5>
+                <canvas id="avgChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <h5>分数分布</h5>
+                <canvas id="distChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Top Job Directions -->
+{{if .TopJobs}}
+<div class="card mb-4">
+    <div class="card-body">
+        <h5><i class="bi bi-signpost-split"></i> 最热门岗位方向</h5>
+        <div class="row g-2 mt-2">
+            {{range .TopJobs}}
+            <div class="col-md-3">
+                <div class="d-flex justify-content-between align-items-center p-2 bg-light rounded">
+                    <span>{{.Name}}</span>
+                    <span class="badge bg-primary">{{.Count}}人</span>
+                </div>
+            </div>
+            {{end}}
+        </div>
+    </div>
+</div>
+{{end}}
+{{end}}
+
+{{define "scripts"}}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+// Average scores radar
+new Chart(document.getElementById('avgChart').getContext('2d'), {
+    type: 'radar',
+    data: {
+        labels: ['ICPC/CCPC', '实习/项目', '学校', '技术栈', '科研/论文'],
+        datasets: [{
+            label: '全站平均',
+            data: [{{.AvgIcpc}}, {{.AvgIntern}}, {{.AvgSchool}}, {{.AvgTech}}, {{.AvgResearch}}],
+            backgroundColor: 'rgba(13,110,253,0.15)',
+            borderColor: 'rgba(13,110,253,0.8)',
+            pointRadius: 5, borderWidth: 2
+        }]
+    },
+    options: {
+        scales: { r: { beginAtZero: true, max: 100, ticks: { stepSize: 20 } } },
+        plugins: { legend: { display: false } }
+    }
+});
+
+// Score distribution
+var dist = {{json .ScoreDist}};
+var labels = ['90+', '80-89', '70-79', '60-69', '50-59', '<50'];
+var colors = ['#198754','#0d6efd','#6f42c1','#fd7e14','#ffc107','#dc3545'];
+new Chart(document.getElementById('distChart').getContext('2d'), {
+    type: 'doughnut',
+    data: {
+        labels: labels,
+        datasets: [{
+            data: labels.map(function(l) { return dist[l] || 0; }),
+            backgroundColor: colors
+        }]
+    },
+    options: { plugins: { legend: { position: 'right' } } }
+});
+</script>
+{{end}}

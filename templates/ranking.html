@@ -11,6 +11,7 @@
         <a href="/ranking?sort=intern" class="btn btn-{{if eq .SortBy "intern"}}success{{else}}outline-success{{end}}">实习/项目</a>
         <a href="/ranking?sort=school" class="btn btn-{{if eq .SortBy "school"}}info{{else}}outline-info{{end}}">学校</a>
         <a href="/ranking?sort=tech" class="btn btn-{{if eq .SortBy "tech"}}warning{{else}}outline-warning{{end}}">技术栈</a>
+        <a href="/ranking?sort=research" class="btn btn-{{if eq .SortBy "research"}}dark{{else}}outline-dark{{end}}">科研</a>
     </div>
 </div>
 
@@ -26,6 +27,7 @@
                 <th>实习/项目</th>
                 <th>学校</th>
                 <th>技术栈</th>
+                <th>科研</th>
                 <th>操作</th>
             </tr>
         </thead>
@@ -47,6 +49,7 @@
                 <td>{{printf "%.0f" .InternScore}}</td>
                 <td>{{printf "%.0f" .SchoolScore}}</td>
                 <td>{{printf "%.0f" .TechScore}}</td>
+                <td>{{printf "%.0f" .ResearchScore}}</td>
                 <td>
                     {{if not .Hidden}}
                     <a href="/file/{{.ShareCode}}" target="_blank" class="btn btn-sm btn-outline-secondary" title="查看原始简历">

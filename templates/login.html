@@ -1,0 +1,71 @@
+{{define "title"}}登录 - Resume Arena{{end}}
+
+{{define "content"}}
+<div class="row justify-content-center mt-4">
+    <div class="col-md-5">
+        <div class="card shadow">
+            <div class="card-header p-0">
+                <ul class="nav nav-tabs card-header-tabs" role="tablist">
+                    <li class="nav-item flex-fill text-center">
+                        <a class="nav-link {{if ne .Tab "register"}}active{{end}}" data-bs-toggle="tab" href="#loginTab">登录</a>
+                    </li>
+                    <li class="nav-item flex-fill text-center">
+                        <a class="nav-link {{if eq .Tab "register"}}active{{end}}" data-bs-toggle="tab" href="#registerTab">注册</a>
+                    </li>
+                </ul>
+            </div>
+            <div class="card-body p-4">
+                <div class="tab-content">
+                    <!-- Login Tab -->
+                    <div class="tab-pane fade {{if ne .Tab "register"}}show active{{end}}" id="loginTab">
+                        {{if .LoginError}}
+                        <div class="alert alert-danger">{{.LoginError}}</div>
+                        {{end}}
+                        <form method="POST" action="/login">
+                            <div class="mb-3">
+                                <label class="form-label">用户名</label>
+                                <input type="text" name="username" class="form-control" required autofocus placeholder="请输入用户名">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">密码</label>
+                                <input type="password" name="password" class="form-control" required placeholder="请输入密码">
+                            </div>
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-primary"><i class="bi bi-box-arrow-in-right"></i> 登录</button>
+                            </div>
+                        </form>
+                        <hr>
+                        <p class="text-center text-muted small mb-0">也可以不登录，直接<a href="/upload">匿名上传简历</a></p>
+                    </div>
+
+                    <!-- Register Tab -->
+                    <div class="tab-pane fade {{if eq .Tab "register"}}show active{{end}}" id="registerTab">
+                        {{if .RegError}}
+                        <div class="alert alert-danger">{{.RegError}}</div>
+                        {{end}}
+                        <form method="POST" action="/register">
+                            <div class="mb-3">
+                                <label class="form-label">用户名</label>
+                                <input type="text" name="username" class="form-control" required placeholder="2-20个字符" minlength="2" maxlength="20">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">密码</label>
+                                <input type="password" name="password" class="form-control" required placeholder="至少6个字符" minlength="6">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">确认密码</label>
+                                <input type="password" name="password2" class="form-control" required placeholder="再输入一次密码">
+                            </div>
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-success"><i class="bi bi-person-plus"></i> 注册</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{{end}}
+
+{{define "scripts"}}{{end}}

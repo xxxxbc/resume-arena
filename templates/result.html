@@ -33,6 +33,13 @@
         当前排名：<span class="badge bg-warning text-dark fs-5">第 {{.Rank}} 名</span>
         / 共 {{.Total}} 人
     </p>
+    {{if .Badges}}
+    <div class="mt-2">
+        {{range .Badges}}
+        <span class="badge bg-gradient rounded-pill px-3 py-2 me-1" style="background:linear-gradient(135deg,#667eea,#764ba2)">{{.}}</span>
+        {{end}}
+    </div>
+    {{end}}
 </div>
 
 <!-- Total Score -->
@@ -94,6 +101,15 @@
                 <h6 class="text-warning"><i class="bi bi-code-slash"></i> 技术栈深度</h6>
                 <div class="display-6 fw-bold">{{printf "%.0f" $r.TechScore}}</div>
                 <p class="text-muted small mt-2">{{$r.TechComment}}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100 border-purple" style="border-color:#6f42c1!important">
+            <div class="card-body">
+                <h6 style="color:#6f42c1"><i class="bi bi-journal-richtext"></i> 科研/论文</h6>
+                <div class="display-6 fw-bold">{{printf "%.0f" $r.ResearchScore}}</div>
+                <p class="text-muted small mt-2">{{$r.ResearchComment}}</p>
             </div>
         </div>
     </div>
@@ -178,18 +194,37 @@
 {{end}}
 {{end}}
 
-<!-- Share -->
-<div class="text-center mb-4">
-    <p class="text-muted">分享链接：</p>
-    <div class="input-group w-50 mx-auto">
-        <input type="text" class="form-control" id="shareUrl" readonly>
-        <button class="btn btn-outline-primary" onclick="copyShare()">
-            <i class="bi bi-clipboard"></i> 复制
+<!-- Like & Share -->
+<div class="card mb-4">
+    <div class="card-body text-center">
+        <button class="btn btn-{{if .HasLiked}}danger{{else}}outline-danger{{end}} btn-lg me-3" id="likeBtn" onclick="doLike()">
+            <i class="bi bi-heart{{if .HasLiked}}-fill{{end}}"></i> <span id="likeCount">{{$r.Likes}}</span>
         </button>
+        <button class="btn btn-outline-primary btn-lg" onclick="copyShare()">
+            <i class="bi bi-share"></i> 分享
+        </button>
+        <input type="hidden" id="shareUrl">
+        <div class="mt-3">
+            <a href="/ranking" class="btn btn-warning"><i class="bi bi-bar-chart"></i> 排行榜</a>
+            <a href="/weekly" class="btn btn-outline-info ms-2"><i class="bi bi-calendar-week"></i> 周榜</a>
+            <a href="/upload" class="btn btn-outline-primary ms-2"><i class="bi bi-upload"></i> 再传一份</a>
+        </div>
     </div>
-    <div class="mt-3">
-        <a href="/ranking" class="btn btn-warning"><i class="bi bi-bar-chart"></i> 查看排行榜</a>
-        <a href="/upload" class="btn btn-outline-primary ms-2"><i class="bi bi-upload"></i> 再传一份</a>
+</div>
+
+<!-- Comments -->
+<div class="card mb-4">
+    <div class="card-body">
+        <h5><i class="bi bi-chat-dots"></i> 评论 (<span id="commentCount">0</span>)</h5>
+        {{if .CurrentUser}}
+        <div class="input-group mb-3">
+            <input type="text" class="form-control" id="commentInput" placeholder="说点什么..." maxlength="200">
+            <button class="btn btn-primary" onclick="postComment()">发送</button>
+        </div>
+        {{else}}
+        <p class="text-muted small"><a href="/login">登录</a>后可以评论</p>
+        {{end}}
+        <div id="commentList"></div>
     </div>
 </div>
 {{end}}
@@ -222,7 +257,7 @@ var ctx = document.getElementById('radarChart').getContext('2d');
 new Chart(ctx, {
     type: 'radar',
     data: {
-        labels: ['ICPC/CCPC', '实习/项目', '学校背景', '技术栈', '综合素质'],
+        labels: ['ICPC/CCPC', '实习/项目', '学校背景', '技术栈', '科研/论文', '综合素质'],
         datasets: [{
             label: '评分',
             data: scores,
@@ -250,9 +285,51 @@ new Chart(ctx, {
 document.getElementById('shareUrl').value = location.href;
 
 function copyShare() {
-    navigator.clipboard.writeText(location.href);
-    alert('链接已复制!');
+    navigator.clipboard.writeText(location.href).then(function() { alert('链接已复制!'); });
 }
+
+function doLike() {
+    fetch('/api/like/{{$r.ShareCode}}', {method:'POST'})
+        .then(function(r){return r.json()})
+        .then(function(d){
+            if(d.ok){
+                document.getElementById('likeCount').textContent=d.likes;
+                var btn=document.getElementById('likeBtn');
+                btn.classList.remove('btn-outline-danger');
+                btn.classList.add('btn-danger');
+                btn.querySelector('i').classList.add('bi-heart-fill');
+                btn.querySelector('i').classList.remove('bi-heart');
+            }
+        });
+}
+
+function loadComments(){
+    fetch('/api/comment/{{$r.ShareCode}}')
+        .then(function(r){return r.json()})
+        .then(function(comments){
+            if(!comments||!comments.length){
+                document.getElementById('commentList').innerHTML='<p class="text-muted small">暂无评论</p>';
+                document.getElementById('commentCount').textContent='0';
+                return;
+            }
+            document.getElementById('commentCount').textContent=comments.length;
+            var html='';
+            comments.forEach(function(c){
+                html+='<div class="d-flex mb-2"><span class="badge bg-dark me-2">'+c.username+'</span><span>'+c.content+'</span></div>';
+            });
+            document.getElementById('commentList').innerHTML=html;
+        });
+}
+
+function postComment(){
+    var input=document.getElementById('commentInput');
+    var content=input.value.trim();
+    if(!content)return;
+    fetch('/api/comment/{{$r.ShareCode}}',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'content='+encodeURIComponent(content)})
+        .then(function(){input.value='';loadComments();});
+}
+
+loadComments();
 </script>
 {{end}}
 {{end}}

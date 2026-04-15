@@ -1,0 +1,124 @@
+{{define "title"}}{{.Title}} - Resume Arena{{end}}
+
+{{define "content"}}
+<h2 class="text-center mb-2"><i class="bi bi-award"></i> {{.Title}}</h2>
+
+<!-- Board tabs -->
+<div class="text-center mb-4">
+    <div class="btn-group" role="group">
+        <a href="/board/icpc" class="btn btn-{{if eq .BoardType "icpc"}}danger{{else}}outline-danger{{end}}">
+            <i class="bi bi-trophy"></i> ICPC/CCPC
+        </a>
+        <a href="/board/intern" class="btn btn-{{if eq .BoardType "intern"}}success{{else}}outline-success{{end}}">
+            <i class="bi bi-briefcase"></i> 实习/项目
+        </a>
+        <a href="/board/school" class="btn btn-{{if eq .BoardType "school"}}info{{else}}outline-info{{end}}">
+            <i class="bi bi-building"></i> 学校背景
+        </a>
+        <a href="/board/tech" class="btn btn-{{if eq .BoardType "tech"}}warning{{else}}outline-warning{{end}}">
+            <i class="bi bi-code-slash"></i> 技术栈
+        </a>
+        <a href="/board/research" class="btn btn-{{if eq .BoardType "research"}}dark{{else}}outline-dark{{end}}">
+            <i class="bi bi-journal-richtext"></i> 科研/论文
+        </a>
+    </div>
+</div>
+
+{{if .Entries}}
+<!-- Top 3 podium -->
+{{if ge (len .Entries) 1}}
+<div class="row justify-content-center mb-4 g-3">
+    {{if ge (len .Entries) 2}}
+    <div class="col-md-3 text-center order-md-1 order-2">
+        {{with index .Entries 1}}
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body py-3">
+                <i class="bi bi-trophy-fill text-secondary fs-2"></i>
+                <div class="fw-bold mt-1">{{.Nickname}}</div>
+                <div class="display-6 fw-bold text-secondary">{{printf "%.0f" .MainScore}}</div>
+                <small class="text-muted">总分 {{printf "%.1f" .TotalScore}}</small>
+                <div class="mt-2"><a href="/result/{{.ShareCode}}" class="btn btn-sm btn-outline-primary">详情</a></div>
+            </div>
+        </div>
+        {{end}}
+    </div>
+    {{end}}
+    <div class="col-md-4 text-center order-md-2 order-1">
+        {{with index .Entries 0}}
+        <div class="card border-warning shadow h-100" style="border-width:2px">
+            <div class="card-body py-4">
+                <i class="bi bi-trophy-fill text-warning fs-1"></i>
+                <div class="fw-bold fs-5 mt-1">{{.Nickname}}</div>
+                <div class="display-4 fw-bold text-warning">{{printf "%.0f" .MainScore}}</div>
+                <small class="text-muted">总分 {{printf "%.1f" .TotalScore}}</small>
+                <div class="mt-2"><a href="/result/{{.ShareCode}}" class="btn btn-sm btn-warning">详情</a></div>
+            </div>
+        </div>
+        {{end}}
+    </div>
+    {{if ge (len .Entries) 3}}
+    <div class="col-md-3 text-center order-md-3 order-3">
+        {{with index .Entries 2}}
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body py-3">
+                <i class="bi bi-trophy-fill fs-2" style="color:#cd7f32"></i>
+                <div class="fw-bold mt-1">{{.Nickname}}</div>
+                <div class="display-6 fw-bold" style="color:#cd7f32">{{printf "%.0f" .MainScore}}</div>
+                <small class="text-muted">总分 {{printf "%.1f" .TotalScore}}</small>
+                <div class="mt-2"><a href="/result/{{.ShareCode}}" class="btn btn-sm btn-outline-primary">详情</a></div>
+            </div>
+        </div>
+        {{end}}
+    </div>
+    {{end}}
+</div>
+{{end}}
+
+<!-- Full list -->
+<div class="table-responsive">
+    <table class="table table-hover ranking-table">
+        <thead class="table-dark">
+            <tr>
+                <th>排名</th>
+                <th>昵称</th>
+                <th>该维度得分</th>
+                <th>总分</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{range .Entries}}
+            <tr class="{{rankClass .Rank}}">
+                <td>
+                    {{if eq .Rank 1}}<i class="bi bi-trophy-fill text-warning"></i>{{end}}
+                    {{if eq .Rank 2}}<i class="bi bi-trophy-fill text-secondary"></i>{{end}}
+                    {{if eq .Rank 3}}<i class="bi bi-trophy-fill" style="color:#cd7f32"></i>{{end}}
+                    <strong>{{.Rank}}</strong>
+                </td>
+                <td class="fw-bold">
+                    {{.Nickname}}
+                    {{if .Hidden}}<i class="bi bi-eye-slash text-muted small"></i>{{end}}
+                </td>
+                <td><span class="badge bg-primary fs-6">{{printf "%.0f" .MainScore}}</span></td>
+                <td class="text-muted">{{printf "%.1f" .TotalScore}}</td>
+                <td>
+                    {{if not .Hidden}}
+                    <a href="/file/{{.ShareCode}}" target="_blank" class="btn btn-sm btn-outline-secondary"><i class="bi {{fileIcon .FileName}}"></i></a>
+                    {{end}}
+                    <a href="/result/{{.ShareCode}}" class="btn btn-sm btn-outline-primary">详情</a>
+                </td>
+            </tr>
+            {{end}}
+        </tbody>
+    </table>
+</div>
+{{else}}
+<div class="text-center py-5">
+    <i class="bi bi-inbox display-1 text-muted"></i>
+    <p class="text-muted mt-3">暂无数据</p>
+    <a href="/upload" class="btn btn-primary">上传简历</a>
+</div>
+{{end}}
+{{end}}
+
+{{define "scripts"}}{{end}}

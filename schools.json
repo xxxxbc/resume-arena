@@ -1,0 +1,164 @@
+{
+  "_comment": "学校 → 计算机就业认可度评分（0-100），基于大厂实际招聘认可度，非单纯学校排名",
+  "_formula": "硬编码分数，AI不再自行评估学校分数，直接查表",
+
+  "国内_第一梯队_S++_S+": {
+    "清华大学": 98, "清华": 98, "Tsinghua": 98,
+    "北京大学": 97, "北大": 97, "PKU": 97, "Peking University": 97,
+    "浙江大学": 94, "浙大": 94, "ZJU": 94,
+    "上海交通大学": 94, "上交": 94, "SJTU": 94,
+    "中国科学院大学": 93, "国科大": 93, "UCAS": 93,
+    "中国科学技术大学": 93, "中科大": 93, "USTC": 93,
+    "南京大学": 92, "南大": 92, "NJU": 92,
+    "北京航空航天大学": 92, "北航": 92, "BUAA": 92,
+    "哈尔滨工业大学": 91, "哈工大": 91, "HIT": 91,
+    "华中科技大学": 91, "华科": 91, "HUST": 91
+  },
+
+  "国内_第二梯队_S_A+": {
+    "电子科技大学": 89, "成电": 89, "UESTC": 89,
+    "西安交通大学": 87, "西交": 87, "XJTU": 87,
+    "东南大学": 87, "东南": 87, "SEU": 87,
+    "北京邮电大学": 90, "北邮": 90, "BUPT": 90,
+    "西安电子科技大学": 86, "西电": 86, "Xidian": 86,
+    "北京理工大学": 86, "北理工": 86, "BIT": 86,
+    "华南理工大学": 85, "华南理工": 85, "SCUT": 85,
+    "武汉大学": 84, "武大": 84, "WHU": 84,
+    "中山大学": 83, "中大": 83, "SYSU": 83,
+    "同济大学": 83, "同济": 83, "Tongji": 83,
+    "上海科技大学": 86, "上科大": 86, "ShanghaiTech": 86,
+    "天津大学": 82, "天大": 82, "TJU": 82,
+    "大连理工大学": 81, "大连理工": 81, "DUT": 81,
+    "中南大学": 80, "中南": 80, "CSU": 80,
+    "山东大学": 79, "山大": 79, "SDU": 79,
+    "重庆大学": 78, "重大": 78, "CQU": 78,
+    "西北工业大学": 82, "西工大": 82, "NPU": 82,
+    "四川大学": 78, "川大": 78, "SCU": 78,
+    "吉林大学": 77, "吉大": 77, "JLU": 77,
+    "湖南大学": 77, "湖大": 77, "HNU": 77,
+    "复旦大学": 93, "复旦": 93, "Fudan": 93
+  },
+
+  "国内_第三梯队_强双非_A_B+": {
+    "杭州电子科技大学": 82, "杭电": 82, "HDU": 82,
+    "深圳大学": 80, "深大": 80, "SZU": 80,
+    "南京邮电大学": 78, "南邮": 78, "NJUPT": 78,
+    "重庆邮电大学": 74, "重邮": 74, "CQUPT": 74,
+    "浙江工业大学": 73, "浙工大": 73, "ZJUT": 73,
+    "广东工业大学": 72, "广工": 72, "GDUT": 72,
+    "西湖大学": 85, "Westlake": 85,
+    "南方科技大学": 83, "南科大": 83, "SUSTech": 83,
+    "南京信息工程大学": 71, "南信大": 71, "NUIST": 71,
+    "桂林电子科技大学": 68, "桂电": 68, "GUET": 68,
+    "成都信息工程大学": 67, "成信大": 67, "CUIT": 67
+  },
+
+  "国内_第四梯队_中流211_B": {
+    "苏州大学": 74, "苏大": 74, "SUDA": 74,
+    "郑州大学": 70, "郑大": 70, "ZZU": 70,
+    "南昌大学": 68, "南昌": 68, "NCU": 68,
+    "安徽大学": 70, "安大": 70, "AHU": 70,
+    "福州大学": 71, "福大": 71, "FZU": 71,
+    "河海大学": 71, "河海": 71, "HHU": 71,
+    "合肥工业大学": 73, "合工大": 73, "HFUT": 73,
+    "华东师范大学": 80, "华东师大": 80, "ECNU": 80,
+    "华东理工大学": 76, "华东理工": 76, "ECUST": 76,
+    "北京科技大学": 76, "北科": 76, "USTB": 76,
+    "南京理工大学": 77, "南理工": 77, "NJUST": 77,
+    "南京航空航天大学": 78, "南航": 78, "NUAA": 78,
+    "北京交通大学": 77, "北交": 77, "BJTU": 77,
+    "兰州大学": 72, "兰大": 72, "LZU": 72,
+    "东北大学": 75, "东北": 75, "NEU": 75,
+    "华北电力大学": 71, "华电": 71, "NCEPU": 71
+  },
+
+  "国内_第五梯队_政策性211_C": {
+    "新疆大学": 55, "新大": 55,
+    "内蒙古大学": 55, "内大": 55,
+    "贵州大学": 56, "贵大": 56,
+    "海南大学": 54, "海大": 54,
+    "西藏大学": 45, "藏大": 45,
+    "青海大学": 48, "青大": 48,
+    "宁夏大学": 50, "宁大": 50,
+    "延边大学": 50, "延大": 50,
+    "石河子大学": 48, "石大": 48
+  },
+
+  "国内_普通一本": {
+    "_default_一本": 60,
+    "_comment": "未在映射表中的一本高校默认60分"
+  },
+
+  "国内_二本三本专科": {
+    "_default_二本": 42,
+    "_default_三本": 35,
+    "_default_专科": 30,
+    "_comment": "未在映射表中的二本42分，三本35分，大专30分"
+  },
+
+  "海外_第一梯队_TOP10": {
+    "MIT": 98, "Massachusetts Institute of Technology": 98,
+    "Stanford": 97, "Stanford University": 97,
+    "CMU": 96, "Carnegie Mellon": 96, "Carnegie Mellon University": 96,
+    "Harvard": 94, "Harvard University": 94,
+    "Princeton": 93, "Princeton University": 93,
+    "Caltech": 93, "California Institute of Technology": 93,
+    "Oxford": 93, "University of Oxford": 93,
+    "Cambridge": 93, "University of Cambridge": 93,
+    "ETH": 93, "ETH Zurich": 93
+  },
+
+  "海外_第二梯队_TOP50": {
+    "UC Berkeley": 92, "Berkeley": 92, "UCB": 92,
+    "UIUC": 88, "University of Illinois": 88,
+    "Georgia Tech": 87, "GaTech": 87,
+    "University of Michigan": 86, "UMich": 86,
+    "Cornell": 88, "Cornell University": 88,
+    "Columbia": 86, "Columbia University": 86,
+    "UCLA": 85, "University of California Los Angeles": 85,
+    "University of Washington": 86, "UW": 86, "UWash": 86,
+    "University of Toronto": 85, "UofT": 85, "多伦多大学": 85,
+    "NUS": 86, "National University of Singapore": 86, "新加坡国立大学": 86,
+    "NTU": 84, "Nanyang Technological University": 84, "南洋理工大学": 84,
+    "University of Tokyo": 83, "东京大学": 83, "東京大学": 83,
+    "Tsinghua-Berkeley": 88,
+    "EPFL": 87,
+    "Imperial": 85, "Imperial College London": 85, "帝国理工": 85,
+    "University of Edinburgh": 83, "爱丁堡大学": 83,
+    "University of Waterloo": 84, "滑铁卢大学": 84, "Waterloo": 84
+  },
+
+  "海外_第三梯队_TOP100": {
+    "UCSD": 82, "UC San Diego": 82,
+    "University of Maryland": 81, "UMD": 81,
+    "Purdue": 80, "Purdue University": 80,
+    "University of Wisconsin": 79, "UW-Madison": 79,
+    "UT Austin": 85, "University of Texas Austin": 85,
+    "University of Pennsylvania": 84, "UPenn": 84, "宾夕法尼亚大学": 84,
+    "Duke": 83, "Duke University": 83,
+    "NYU": 82, "New York University": 82,
+    "USC": 79, "University of Southern California": 79,
+    "Brown": 80, "Brown University": 80,
+    "University of Hong Kong": 82, "港大": 82, "HKU": 82,
+    "HKUST": 83, "香港科技大学": 83, "港科大": 83,
+    "CUHK": 80, "香港中文大学": 80, "港中文": 80,
+    "Seoul National University": 78, "首尔大学": 78,
+    "KAIST": 82,
+    "Kyoto University": 78, "京都大学": 78
+  },
+
+  "海外_第四梯队_100_300": {
+    "_default_qs100_200": 72,
+    "_default_qs200_300": 65,
+    "_comment": "QS 100-200给72分左右，200-300给65分左右"
+  },
+
+  "海外_第五梯队_300+": {
+    "_default_qs300_plus": 55,
+    "_comment": "QS 300以后的海外高校55分左右"
+  },
+
+  "学历加分": {
+    "_comment": "硕士在对应学校分数上+3分，博士+5分"
+  }
+}

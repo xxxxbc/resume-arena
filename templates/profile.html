@@ -1,0 +1,114 @@
+{{define "title"}}个人中心 - Resume Arena{{end}}
+
+{{define "content"}}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3><i class="bi bi-person-circle"></i> {{.User.Username}} 的个人中心</h3>
+    <div>
+        <a href="/upload" class="btn btn-primary btn-sm"><i class="bi bi-upload"></i> 上传新简历</a>
+        <span class="badge bg-dark ms-2">{{.Count}} 份简历</span>
+    </div>
+</div>
+
+{{if .Resumes}}
+<!-- Score Trend -->
+{{if gt .Count 1}}
+<div class="card mb-4">
+    <div class="card-body">
+        <h5><i class="bi bi-graph-up"></i> 分数趋势</h5>
+        <canvas id="trendChart" height="120"></canvas>
+    </div>
+</div>
+{{end}}
+
+<!-- Resume List -->
+<div class="table-responsive">
+    <table class="table table-hover align-middle">
+        <thead class="table-dark">
+            <tr>
+                <th>昵称</th>
+                <th>总分</th>
+                <th>ICPC</th>
+                <th>实习</th>
+                <th>学校</th>
+                <th>技术栈</th>
+                <th>状态</th>
+                <th>时间</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{range .Resumes}}
+            <tr>
+                <td class="fw-bold">{{.Nickname}}</td>
+                <td>
+                    {{if eq .Status "done"}}
+                    <span class="badge bg-primary fs-6">{{printf "%.1f" .TotalScore}}</span>
+                    {{else if eq .Status "error"}}
+                    <span class="badge bg-danger">失败</span>
+                    {{else}}
+                    <span class="badge bg-warning text-dark">评分中</span>
+                    {{end}}
+                </td>
+                <td>{{if eq .Status "done"}}{{printf "%.0f" .IcpcScore}}{{else}}-{{end}}</td>
+                <td>{{if eq .Status "done"}}{{printf "%.0f" .InternScore}}{{else}}-{{end}}</td>
+                <td>{{if eq .Status "done"}}{{printf "%.0f" .SchoolScore}}{{else}}-{{end}}</td>
+                <td>{{if eq .Status "done"}}{{printf "%.0f" .TechScore}}{{else}}-{{end}}</td>
+                <td>
+                    {{if .Hidden}}<span class="badge bg-secondary">隐藏</span>
+                    {{else}}<span class="badge bg-success">公开</span>{{end}}
+                </td>
+                <td class="small text-muted text-nowrap">{{timeFormat .CreatedAt}}</td>
+                <td>
+                    <a href="/result/{{.ShareCode}}" class="btn btn-sm btn-outline-primary">详情</a>
+                </td>
+            </tr>
+            {{end}}
+        </tbody>
+    </table>
+</div>
+{{else}}
+<div class="text-center py-5">
+    <i class="bi bi-inbox display-1 text-muted"></i>
+    <p class="text-muted mt-3">还没有提交过简历</p>
+    <a href="/upload" class="btn btn-primary">上传第一份简历</a>
+</div>
+{{end}}
+{{end}}
+
+{{define "scripts"}}
+{{if and .Resumes (gt .Count 1)}}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+var resumes = [
+    {{range .Resumes}}
+    {{if eq .Status "done"}}
+    {date: "{{timeFormat .CreatedAt}}", score: {{printf "%.1f" .TotalScore}}},
+    {{end}}
+    {{end}}
+].reverse();
+
+if (resumes.length > 1) {
+    var ctx = document.getElementById('trendChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: resumes.map(function(r) { return r.date; }),
+            datasets: [{
+                label: '总分',
+                data: resumes.map(function(r) { return r.score; }),
+                borderColor: 'rgba(13, 110, 253, 0.8)',
+                backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                fill: true,
+                tension: 0.3,
+                pointRadius: 5
+            }]
+        },
+        options: {
+            scales: { y: { beginAtZero: false, min: 0, max: 100 } },
+            plugins: { legend: { display: false } }
+        }
+    });
+}
+</script>
+{{end}}
+{{end}}

@@ -16,9 +16,17 @@
                 <i class="bi bi-trophy"></i> Resume Arena
             </a>
             <div class="navbar-nav ms-auto">
-                <a class="nav-link" href="/upload"><i class="bi bi-upload"></i> 上传简历</a>
-                <a class="nav-link" href="/ranking"><i class="bi bi-bar-chart"></i> 排行榜</a>
+                <a class="nav-link" href="/upload"><i class="bi bi-upload"></i> 上传</a>
+                <a class="nav-link" href="/ranking"><i class="bi bi-bar-chart"></i> 总榜</a>
+                <a class="nav-link" href="/board/icpc"><i class="bi bi-award"></i> 分榜</a>
+                <a class="nav-link" href="/stats"><i class="bi bi-graph-up"></i> 数据</a>
                 <a class="nav-link" href="/prompt"><i class="bi bi-journal-text"></i> 评分标准</a>
+                {{if .CurrentUser}}
+                <a class="nav-link" href="/profile"><i class="bi bi-person-circle"></i> {{.CurrentUser.Username}}</a>
+                <a class="nav-link" href="/logout"><i class="bi bi-box-arrow-right"></i></a>
+                {{else}}
+                <a class="nav-link" href="/login"><i class="bi bi-person"></i> 登录</a>
+                {{end}}
             </div>
         </div>
     </nav>
@@ -31,10 +39,10 @@
         <div class="container text-center">
             <small>Resume Arena - ACMer简历竞技场 | AI Powered by LLM</small>
             <br>
-            <small class="text-muted">
-                <a href="https://github.com/xxxxbc/resume-arena" target="_blank" class="text-muted text-decoration-none"><i class="bi bi-github"></i> GitHub</a>
+            <small class="text-light" style="opacity:0.7">
+                <a href="https://github.com/xxxxbc/resume-arena" target="_blank" class="text-light text-decoration-none"><i class="bi bi-github"></i> GitHub</a>
                 &nbsp;|&nbsp;
-                <span>QQ交流群: 572365054</span>
+                <span>QQ交流群: <strong>572365054</strong></span>
             </small>
         </div>
     </footer>

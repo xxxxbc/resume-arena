@@ -30,7 +30,9 @@
                     <div class="mb-3">
                         <label class="form-label fw-bold">昵称 *</label>
                         <input type="text" name="nickname" class="form-control"
-                               placeholder="你的昵称（将显示在排行榜上）" required maxlength="30">
+                               placeholder="你的昵称（将显示在排行榜上）" required maxlength="30"
+                               {{if .CurrentUser}}value="{{.CurrentUser.Username}}"{{end}}>
+                        {{if not .CurrentUser}}<div class="form-text"><a href="/login">登录</a>后上传可追踪分数变化</div>{{end}}
                     </div>
 
                     <div class="mb-3">
