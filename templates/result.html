@@ -73,7 +73,8 @@
             <div class="card-body">
                 <h6 class="text-danger"><i class="bi bi-award"></i> ICPC/CCPC实力</h6>
                 <div class="display-6 fw-bold">{{printf "%.0f" $r.IcpcScore}}</div>
-                {{if not $r.Hidden}}<p class="text-muted small mt-2">{{$r.IcpcComment}}</p>{{end}}
+                {{if $r.Hidden}}<p class="text-muted small mt-2 fst-italic">{{.AnonIcpc}}</p>
+                {{else}}<p class="text-muted small mt-2">{{$r.IcpcComment}}</p>{{end}}
             </div>
         </div>
     </div>
@@ -91,7 +92,8 @@
             <div class="card-body">
                 <h6 class="text-info"><i class="bi bi-building"></i> 学校背景</h6>
                 <div class="display-6 fw-bold">{{printf "%.0f" $r.SchoolScore}}</div>
-                {{if not $r.Hidden}}<p class="text-muted small mt-2">{{$r.SchoolComment}}</p>{{end}}
+                {{if $r.Hidden}}<p class="text-muted small mt-2 fst-italic">{{.AnonSchool}}</p>
+                {{else}}<p class="text-muted small mt-2">{{$r.SchoolComment}}</p>{{end}}
             </div>
         </div>
     </div>
@@ -109,7 +111,8 @@
             <div class="card-body">
                 <h6 style="color:#6f42c1"><i class="bi bi-journal-richtext"></i> 科研/论文</h6>
                 <div class="display-6 fw-bold">{{printf "%.0f" $r.ResearchScore}}</div>
-                <p class="text-muted small mt-2">{{$r.ResearchComment}}</p>
+                {{if $r.Hidden}}<p class="text-muted small mt-2 fst-italic">{{.AnonResearch}}</p>
+                {{else}}<p class="text-muted small mt-2">{{$r.ResearchComment}}</p>{{end}}
             </div>
         </div>
     </div>

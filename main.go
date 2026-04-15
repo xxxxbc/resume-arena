@@ -992,13 +992,21 @@ func handleResult(w http.ResponseWriter, r *http.Request) {
 	comments := store.GetComments(resume.ID)
 	hasLiked := store.HasLiked(resume.ID, getClientIP(r))
 
+	// Anonymized comments for hidden resumes
+	anonIcpc := anonIcpcComment(resume.IcpcScore)
+	anonSchool := anonSchoolComment(resume.SchoolScore)
+	anonResearch := anonResearchComment(resume.ResearchScore)
+
 	render(w, r, "result", map[string]interface{}{
-		"Resume":   resume,
-		"Rank":     rank,
-		"Total":    total,
-		"Badges":   badges,
-		"Comments": comments,
-		"HasLiked": hasLiked,
+		"Resume":       resume,
+		"Rank":         rank,
+		"Total":        total,
+		"Badges":       badges,
+		"Comments":     comments,
+		"HasLiked":     hasLiked,
+		"AnonIcpc":     anonIcpc,
+		"AnonSchool":   anonSchool,
+		"AnonResearch": anonResearch,
 		"Scores": []float64{
 			resume.IcpcScore, resume.InternScore,
 			resume.SchoolScore, resume.TechScore, resume.ResearchScore, resume.OverallScore,
@@ -1735,45 +1743,93 @@ func loadSchoolScores() {
 	log.Printf("Loaded %d school score mappings", len(schoolScores))
 }
 
-func lookupSchoolScore(schoolName string) (float64, bool) {
-	if schoolScores == nil {
-		return 0, false
+// sortedSchoolNames is sorted by length DESC for longest-match-first
+var sortedSchoolNames []string
+
+func buildSortedSchoolNames() {
+	for name := range schoolScores {
+		sortedSchoolNames = append(sortedSchoolNames, name)
 	}
-	name := strings.ToLower(strings.TrimSpace(schoolName))
-	// Try exact match
-	if s, ok := schoolScores[name]; ok {
-		return s, true
-	}
-	// Try substring match
-	for k, v := range schoolScores {
-		if strings.Contains(name, k) || strings.Contains(k, name) {
-			return v, true
-		}
-	}
-	return 0, false
+	sort.Slice(sortedSchoolNames, func(i, j int) bool {
+		return len(sortedSchoolNames[i]) > len(sortedSchoolNames[j])
+	})
 }
 
 func overrideSchoolScore(aiScore float64, comment string) float64 {
-	// Try to find school name in the AI comment and look up hardcoded score
 	if schoolScores == nil {
 		return aiScore
 	}
-	// Search comment for any known school name
+	if sortedSchoolNames == nil {
+		buildSortedSchoolNames()
+	}
 	commentLower := strings.ToLower(comment)
-	bestScore := 0.0
-	found := false
-	for name, score := range schoolScores {
-		if strings.Contains(commentLower, strings.ToLower(name)) {
-			if score > bestScore {
-				bestScore = score
-				found = true
-			}
+	// Longest match first - prevents "浙大" matching "浙大宁波理工学院"
+	for _, name := range sortedSchoolNames {
+		if strings.Contains(commentLower, name) {
+			return schoolScores[name]
 		}
 	}
-	if found {
-		return bestScore
-	}
 	return aiScore
+}
+
+// Generate anonymized comments for hidden resumes
+func anonIcpcComment(score float64) string {
+	switch {
+	case score >= 95:
+		return "WF/IOI金牌级别选手"
+	case score >= 88:
+		return "WF/EC Final级别选手"
+	case score >= 78:
+		return "区域赛金牌级别选手"
+	case score >= 65:
+		return "区域赛银牌级别选手"
+	case score >= 52:
+		return "区域赛铜牌级别选手"
+	case score >= 40:
+		return "有区域赛参赛经历"
+	case score >= 25:
+		return "有非核心赛事获奖经历"
+	case score >= 10:
+		return "有少量竞赛相关经历"
+	default:
+		return "简历中未提及竞赛经历"
+	}
+}
+
+func anonSchoolComment(score float64) string {
+	switch {
+	case score >= 93:
+		return "C9/顶尖高校"
+	case score >= 85:
+		return "强985/顶尖211高校"
+	case score >= 75:
+		return "985高校"
+	case score >= 65:
+		return "211高校"
+	case score >= 55:
+		return "普通一本高校"
+	case score >= 35:
+		return "二本/三本高校"
+	case score >= 25:
+		return "简历中未提及学校信息"
+	default:
+		return "简历中未提及学校信息"
+	}
+}
+
+func anonResearchComment(score float64) string {
+	switch {
+	case score >= 85:
+		return "有顶会论文发表经历"
+	case score >= 65:
+		return "有较高质量科研论文"
+	case score >= 40:
+		return "有科研/论文经历"
+	case score >= 20:
+		return "有少量科研经历"
+	default:
+		return "简历中未提及科研经历"
+	}
 }
 
 func loadPrompt() {
