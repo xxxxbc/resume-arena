@@ -194,6 +194,9 @@ type Resume struct {
 	Suggestions    []string  `json:"suggestions"`
 	Summary        string    `json:"summary"`
 	JobMatches     []JobMatch `json:"job_matches"`
+	SalaryMin      int       `json:"salary_min"`
+	SalaryMax      int       `json:"salary_max"`
+	SalaryComment  string    `json:"salary_comment"`
 	Status         string    `json:"status"`
 	ErrorMsg       string    `json:"error_msg"`
 	ShareCode      string    `json:"share_code"`
@@ -220,12 +223,19 @@ type JobMatch struct {
 	Reason  string `json:"reason"`
 }
 
+type SalaryPrediction struct {
+	Min     int    `json:"min"`
+	Max     int    `json:"max"`
+	Comment string `json:"comment"`
+}
+
 type ScoreResult struct {
 	TotalScore  float64             `json:"total_score"`
 	Dimensions  map[string]DimScore `json:"dimensions"`
 	Suggestions []string            `json:"suggestions"`
 	Summary     string              `json:"summary"`
 	JobMatches  []JobMatch          `json:"job_matches"`
+	Salary      SalaryPrediction    `json:"salary"`
 }
 
 type DimScore struct {
@@ -1631,6 +1641,9 @@ func scoreResume(id int, filePath string) {
 		r.Suggestions = result.Suggestions
 		r.Summary = result.Summary
 		r.JobMatches = result.JobMatches
+		r.SalaryMin = result.Salary.Min
+		r.SalaryMax = result.Salary.Max
+		r.SalaryComment = result.Salary.Comment
 		r.Status = "done"
 	})
 }

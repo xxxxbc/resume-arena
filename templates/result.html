@@ -152,6 +152,30 @@
 </div>
 {{end}}
 
+<!-- Salary Prediction -->
+{{if $r.SalaryMax}}
+<div class="card mb-4 border-0 shadow-sm">
+    <div class="card-body text-center">
+        <h5><i class="bi bi-cash-stack"></i> 预测薪资</h5>
+        <div class="display-4 fw-bold mt-2" style="color:#198754">
+            {{$r.SalaryMin}}k - {{$r.SalaryMax}}k
+            <small class="fs-6 text-muted fw-normal">/月</small>
+        </div>
+        <div class="mt-2">
+            <div class="d-inline-block text-start" style="max-width:500px">
+                <div class="progress mb-2" style="height:20px">
+                    {{$pct := 0}}
+                    <div class="progress-bar bg-success" style="width:{{$r.SalaryMin}}%">{{$r.SalaryMin}}k</div>
+                    <div class="progress-bar bg-success bg-opacity-50" style="width:{{$r.SalaryMax}}%"></div>
+                </div>
+            </div>
+        </div>
+        <p class="text-muted small mt-2">{{$r.SalaryComment}}</p>
+        <p class="text-muted small mb-0" style="font-size:0.75rem">* 薪资预测仅供参考，基于简历信息和2025年市场行情估算，实际薪资受面试表现、城市、公司等因素影响</p>
+    </div>
+</div>
+{{end}}
+
 <!-- Job Recommendations -->
 {{if $r.JobMatches}}
 <div class="card mb-4">
