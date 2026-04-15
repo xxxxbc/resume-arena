@@ -1755,20 +1755,66 @@ func buildSortedSchoolNames() {
 	})
 }
 
+// School score by tier label (from AI comment)
+var tierScores = map[string]float64{
+	"清北": 98, "c9": 93, "国科大": 93,
+	"强985": 88, "985": 80,
+	"强211": 78, "211": 72,
+	"强双非": 78,
+	"普通一本": 58, "一本": 58,
+	"二本": 42,
+	"三本": 38, "独立学院": 38,
+	"专科": 30,
+	"海外top10": 97, "海外top30": 90, "海外top50": 85,
+	"海外top100": 78, "海外top200": 70, "海外普通": 55,
+	"未提及": 30,
+}
+
+// sortedTierKeys sorted by length DESC for longest-match-first
+var sortedTierKeys []string
+
+func init() {
+	for k := range tierScores {
+		sortedTierKeys = append(sortedTierKeys, k)
+	}
+	sort.Slice(sortedTierKeys, func(i, j int) bool {
+		return len(sortedTierKeys[i]) > len(sortedTierKeys[j])
+	})
+}
+
 func overrideSchoolScore(aiScore float64, comment string) float64 {
-	if schoolScores == nil {
-		return aiScore
-	}
-	if sortedSchoolNames == nil {
-		buildSortedSchoolNames()
-	}
 	commentLower := strings.ToLower(comment)
-	// Longest match first - prevents "浙大" matching "浙大宁波理工学院"
-	for _, name := range sortedSchoolNames {
-		if strings.Contains(commentLower, name) {
-			return schoolScores[name]
+
+	// 1. Try tier label match from AI comment ("层次：XXX")
+	if idx := strings.Index(commentLower, "层次"); idx >= 0 {
+		tierPart := commentLower[idx:]
+		for _, tier := range sortedTierKeys {
+			if strings.Contains(tierPart, strings.ToLower(tier)) {
+				score := tierScores[tier]
+				// Check for 硕士/博士 bonus
+				if strings.Contains(commentLower, "博士+5") || strings.Contains(commentLower, "博士") && strings.Contains(commentLower, "+5") {
+					score += 5
+				} else if strings.Contains(commentLower, "硕士+3") || strings.Contains(commentLower, "硕士") && strings.Contains(commentLower, "+3") {
+					score += 3
+				}
+				if score > 100 {
+					score = 100
+				}
+				return score
+			}
 		}
 	}
+
+	// 2. Fallback: try known school name lookup from schools.json
+	if schoolScores != nil && sortedSchoolNames != nil {
+		for _, name := range sortedSchoolNames {
+			if strings.Contains(commentLower, name) {
+				return schoolScores[name]
+			}
+		}
+	}
+
+	// 3. Last resort: trust AI score
 	return aiScore
 }
 
@@ -1798,20 +1844,18 @@ func anonIcpcComment(score float64) string {
 
 func anonSchoolComment(score float64) string {
 	switch {
-	case score >= 93:
-		return "C9/顶尖高校"
-	case score >= 85:
-		return "强985/顶尖211高校"
-	case score >= 75:
-		return "985高校"
-	case score >= 65:
-		return "211高校"
+	case score >= 95:
+		return "清北/海外TOP10级别"
+	case score >= 88:
+		return "强985/海外TOP30级别"
+	case score >= 78:
+		return "985/强211/强双非级别"
+	case score >= 70:
+		return "211级别"
 	case score >= 55:
-		return "普通一本高校"
-	case score >= 35:
-		return "二本/三本高校"
-	case score >= 25:
-		return "简历中未提及学校信息"
+		return "普通一本级别"
+	case score >= 38:
+		return "二本/三本级别"
 	default:
 		return "简历中未提及学校信息"
 	}
