@@ -1022,6 +1022,19 @@ func handleRanking(w http.ResponseWriter, r *http.Request) {
 	sortBy := r.URL.Query().Get("sort")
 	done := store.GetDoneResumes()
 
+	// Career track sort helper
+	careerSort := func(key string) {
+		track := careerTracks[key]
+		w := track.weights
+		sort.Slice(done, func(i, j int) bool {
+			si := done[i].IcpcScore*w.icpc + done[i].InternScore*w.intern + done[i].SchoolScore*w.school +
+				done[i].TechScore*w.tech + done[i].ResearchScore*w.research + done[i].OverallScore*w.overall
+			sj := done[j].IcpcScore*w.icpc + done[j].InternScore*w.intern + done[j].SchoolScore*w.school +
+				done[j].TechScore*w.tech + done[j].ResearchScore*w.research + done[j].OverallScore*w.overall
+			return si > sj
+		})
+	}
+
 	switch sortBy {
 	case "icpc":
 		sort.Slice(done, func(i, j int) bool { return done[i].IcpcScore > done[j].IcpcScore })
@@ -1033,6 +1046,16 @@ func handleRanking(w http.ResponseWriter, r *http.Request) {
 		sort.Slice(done, func(i, j int) bool { return done[i].TechScore > done[j].TechScore })
 	case "research":
 		sort.Slice(done, func(i, j int) bool { return done[i].ResearchScore > done[j].ResearchScore })
+	case "c_algo":
+		careerSort("algo")
+	case "c_backend":
+		careerSort("backend")
+	case "c_quant":
+		careerSort("quant")
+	case "c_infra":
+		careerSort("infra")
+	case "c_phd":
+		careerSort("phd")
 	default:
 		sortBy = "total"
 		sort.Slice(done, func(i, j int) bool { return done[i].TotalScore > done[j].TotalScore })

@@ -1,17 +1,29 @@
 {{define "title"}}排行榜 - Resume Arena{{end}}
 
 {{define "content"}}
-<h2 class="text-center mb-4"><i class="bi bi-trophy"></i> ACMer 简历排行榜</h2>
+<h2 class="text-center mb-4"><i class="bi bi-trophy"></i> 简历排行榜</h2>
 
-<!-- Sort buttons -->
-<div class="text-center mb-4">
-    <div class="btn-group" role="group">
+<!-- Sort buttons: dimensions -->
+<div class="text-center mb-2">
+    <small class="text-muted">按维度排序：</small>
+    <div class="btn-group btn-group-sm" role="group">
         <a href="/ranking?sort=total" class="btn btn-{{if eq .SortBy "total"}}primary{{else}}outline-primary{{end}}">总分</a>
-        <a href="/ranking?sort=icpc" class="btn btn-{{if eq .SortBy "icpc"}}danger{{else}}outline-danger{{end}}">ICPC/CCPC</a>
-        <a href="/ranking?sort=intern" class="btn btn-{{if eq .SortBy "intern"}}success{{else}}outline-success{{end}}">实习/项目</a>
+        <a href="/ranking?sort=icpc" class="btn btn-{{if eq .SortBy "icpc"}}danger{{else}}outline-danger{{end}}">ICPC</a>
+        <a href="/ranking?sort=intern" class="btn btn-{{if eq .SortBy "intern"}}success{{else}}outline-success{{end}}">实习</a>
         <a href="/ranking?sort=school" class="btn btn-{{if eq .SortBy "school"}}info{{else}}outline-info{{end}}">学校</a>
         <a href="/ranking?sort=tech" class="btn btn-{{if eq .SortBy "tech"}}warning{{else}}outline-warning{{end}}">技术栈</a>
         <a href="/ranking?sort=research" class="btn btn-{{if eq .SortBy "research"}}dark{{else}}outline-dark{{end}}">科研</a>
+    </div>
+</div>
+<!-- Sort buttons: career tracks -->
+<div class="text-center mb-4">
+    <small class="text-muted">按岗位方向排序：</small>
+    <div class="btn-group btn-group-sm" role="group">
+        <a href="/ranking?sort=c_algo" class="btn btn-{{if eq .SortBy "c_algo"}}danger{{else}}outline-danger{{end}}">算法/AI岗</a>
+        <a href="/ranking?sort=c_backend" class="btn btn-{{if eq .SortBy "c_backend"}}success{{else}}outline-success{{end}}">后端开发</a>
+        <a href="/ranking?sort=c_quant" class="btn btn-{{if eq .SortBy "c_quant"}}dark{{else}}outline-dark{{end}}">量化开发</a>
+        <a href="/ranking?sort=c_infra" class="btn btn-{{if eq .SortBy "c_infra"}}primary{{else}}outline-primary{{end}}">基础架构</a>
+        <a href="/ranking?sort=c_phd" class="btn btn-{{if eq .SortBy "c_phd"}}warning{{else}}outline-warning{{end}}">科研/读博</a>
     </div>
 </div>
 
