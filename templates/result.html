@@ -127,6 +127,31 @@
     </div>
 </div>
 
+<!-- Career Track Scores -->
+{{if .CareerScores}}
+<div class="card mb-4">
+    <div class="card-body">
+        <h5><i class="bi bi-signpost-2"></i> 岗位适配分 <small class="text-muted fw-normal">（不同方向，不同权重）</small></h5>
+        <div class="row g-2 mt-2">
+            {{range .CareerScores}}
+            <div class="col-md col-6">
+                <div class="card border-0 text-center h-100" style="background:{{.Color}}10">
+                    <div class="card-body p-2">
+                        <i class="bi {{.Icon}} fs-4" style="color:{{.Color}}"></i>
+                        <div class="small fw-bold mt-1">{{.Name}}</div>
+                        <div class="fs-3 fw-bold" style="color:{{.Color}}">{{printf "%.0f" .Score}}</div>
+                    </div>
+                </div>
+            </div>
+            {{end}}
+        </div>
+        <p class="text-muted small mt-2 mb-0 text-center">
+            各岗位使用不同的维度权重计算，最高分 = 最适合的方向
+        </p>
+    </div>
+</div>
+{{end}}
+
 <!-- Job Recommendations -->
 {{if $r.JobMatches}}
 <div class="card mb-4">

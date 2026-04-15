@@ -997,6 +997,9 @@ func handleResult(w http.ResponseWriter, r *http.Request) {
 	anonSchool := anonSchoolComment(resume.SchoolScore)
 	anonResearch := anonResearchComment(resume.ResearchScore)
 
+	// Career track scores (different weights per direction)
+	careerScores := calcCareerScores(resume)
+
 	render(w, r, "result", map[string]interface{}{
 		"Resume":       resume,
 		"Rank":         rank,
@@ -1007,6 +1010,7 @@ func handleResult(w http.ResponseWriter, r *http.Request) {
 		"AnonIcpc":     anonIcpc,
 		"AnonSchool":   anonSchool,
 		"AnonResearch": anonResearch,
+		"CareerScores": careerScores,
 		"Scores": []float64{
 			resume.IcpcScore, resume.InternScore,
 			resume.SchoolScore, resume.TechScore, resume.ResearchScore, resume.OverallScore,
@@ -1874,6 +1878,59 @@ func anonResearchComment(score float64) string {
 	default:
 		return "简历中未提及科研经历"
 	}
+}
+
+// Career track scoring with different weights
+type CareerScore struct {
+	Name  string
+	Icon  string
+	Score float64
+	Color string
+}
+
+type careerWeights struct {
+	icpc, intern, school, tech, research, overall float64
+}
+
+var careerTracks = map[string]struct {
+	name    string
+	icon    string
+	color   string
+	weights careerWeights
+}{
+	"algo": {"算法/AI岗", "bi-cpu", "#dc3545",
+		careerWeights{0.15, 0.10, 0.20, 0.15, 0.35, 0.05}},
+	"backend": {"后端开发", "bi-hdd-rack", "#198754",
+		careerWeights{0.15, 0.30, 0.10, 0.30, 0.05, 0.10}},
+	"quant": {"量化开发", "bi-graph-up-arrow", "#6f42c1",
+		careerWeights{0.30, 0.15, 0.15, 0.20, 0.15, 0.05}},
+	"infra": {"基础架构", "bi-gear-wide-connected", "#0d6efd",
+		careerWeights{0.10, 0.25, 0.10, 0.35, 0.10, 0.10}},
+	"phd": {"科研/读博", "bi-mortarboard", "#fd7e14",
+		careerWeights{0.10, 0.05, 0.25, 0.10, 0.40, 0.10}},
+}
+
+// careerOrder defines display order
+var careerOrder = []string{"algo", "backend", "quant", "infra", "phd"}
+
+func calcCareerScores(r *Resume) []CareerScore {
+	var result []CareerScore
+	for _, key := range careerOrder {
+		track := careerTracks[key]
+		w := track.weights
+		score := r.IcpcScore*w.icpc + r.InternScore*w.intern + r.SchoolScore*w.school +
+			r.TechScore*w.tech + r.ResearchScore*w.research + r.OverallScore*w.overall
+		score = math.Round(score*10) / 10
+		result = append(result, CareerScore{
+			Name:  track.name,
+			Icon:  track.icon,
+			Score: score,
+			Color: track.color,
+		})
+	}
+	// Sort by score DESC
+	sort.Slice(result, func(i, j int) bool { return result[i].Score > result[j].Score })
+	return result
 }
 
 func loadPrompt() {
